@@ -1,0 +1,13 @@
+{
+  "name": "dev-skills",
+  "owner": {
+    "name": "mad"
+  },
+  "plugins": [
+    {
+      "name": "dev-skills",
+      "source": "./",
+      "description": "Development workflow skills: PR creation, design planning, and code review"
+    }
+  ]
+}
