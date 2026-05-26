@@ -2,7 +2,7 @@
 name: branch-review-loop
 description: Iteratively review and fix the current branch until it converges (no substantive issues remain)
 argument-hint: "[base-branch]"
-allowed-tools: Read, Bash(git *), Task
+allowed-tools: Read, Bash(git *), Bash(echo *), Task
 ---
 
 # Branch Review Loop — Review → Fix → Repeat Until Clean
@@ -47,7 +47,12 @@ bookkeeping; the reviewer never sees it.
 3. The fixer commits code each round, so the working tree must be clean. Run `git status --short`.
    If there are uncommitted changes, commit them first as `branch-review-loop: baseline` so round
    commits are isolated. (Do not stash — the reviewer reviews committed state.)
-4. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
+4. Resolve the absolute path to the companion `branch-review` skill. The reviewer runs as a
+   subagent, which cannot use the Skill tool and does not share this skill's working directory,
+   so it must be given an absolute filesystem path:
+   !`echo "${CLAUDE_SKILL_DIR%/*}/branch-review/SKILL.md"`
+   Use this absolute path wherever the reviewer prompt below says `<review skill path>`.
+5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
 Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
 
@@ -57,8 +62,9 @@ Increment `N`. Spawn a **new** reviewer agent. Its prompt must contain **only** 
 and the instructions below — never the findings or context from previous rounds.
 
 > Run the `branch-review` skill's process (Phases 1–4) on the current branch against base `<base>`.
-> Follow `skills/branch-review/SKILL.md` exactly for Phases 1–4: gather the diff, identify candidate
-> issues, verify them in parallel with `Explore` agents, and confirm which are real.
+> Read the review process from the file at `<review skill path>` and follow it exactly for Phases
+> 1–4: gather the diff, identify candidate issues, verify them in parallel with `Explore` agents,
+> and confirm which are real.
 >
 > **Do not run Phase 5** — do not ask the user anything and do not edit any code.
 >
@@ -134,4 +140,5 @@ substantive issues outstanding, say so plainly and hand control back — do not 
 - The orchestrator never edits code or runs the review itself — delegating both keeps its own context
   from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
 - This skill builds directly on `branch-review`; if that skill's process changes, this loop inherits
-  the change because the reviewer agent is told to follow `skills/branch-review/SKILL.md`.
+  the change because the reviewer agent is told to follow the `branch-review` SKILL.md at its
+  resolved absolute path (`<review skill path>`).

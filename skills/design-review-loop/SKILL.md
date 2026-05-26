@@ -2,7 +2,7 @@
 name: design-review-loop
 description: Iteratively review and fix a design plan until it converges (no substantive issues remain)
 argument-hint: "<path to plan file>"
-allowed-tools: Read, Bash(git *), Task
+allowed-tools: Read, Bash(git *), Bash(echo *), Task
 ---
 
 # Design Review Loop — Review → Fix → Repeat Until Clean
@@ -45,7 +45,12 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
 2. Confirm the working tree is clean enough to commit the plan file per round
    (`git status --short -- <plan file>`). If the plan file already has uncommitted changes,
    commit them first as `design-review-loop: baseline` so round commits are isolated.
-3. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
+3. Resolve the absolute path to the companion `design-review` skill. The reviewer runs as a
+   subagent, which cannot use the Skill tool and does not share this skill's working directory,
+   so it must be given an absolute filesystem path:
+   !`echo "${CLAUDE_SKILL_DIR%/*}/design-review/SKILL.md"`
+   Use this absolute path wherever the reviewer prompt below says `<review skill path>`.
+4. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
 Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
 
@@ -55,8 +60,9 @@ Increment `N`. Spawn a **new** reviewer agent. Its prompt must contain **only** 
 path and the instructions below — never the findings or context from previous rounds.
 
 > Run the `design-review` skill's process (Phases 1–4) on the plan file at `<plan path>`.
-> Follow `skills/design-review/SKILL.md` exactly for Phases 1–4: gather context, identify
-> candidate issues, verify them in parallel with `Explore` agents, and confirm which are real.
+> Read the review process from the file at `<review skill path>` and follow it exactly for
+> Phases 1–4: gather context, identify candidate issues, verify them in parallel with `Explore`
+> agents, and confirm which are real.
 >
 > **Do not run Phase 5** — do not ask the user anything and do not edit the plan.
 >
@@ -132,4 +138,5 @@ with substantive issues outstanding, say so plainly and hand control back — do
 - The orchestrator never edits the plan or runs the review itself — delegating both keeps its own
   context from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
 - This skill builds directly on `design-review`; if that skill's process changes, this loop inherits
-  the change because the reviewer agent is told to follow `skills/design-review/SKILL.md`.
+  the change because the reviewer agent is told to follow the `design-review` SKILL.md at its
+  resolved absolute path (`<review skill path>`).
