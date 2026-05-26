@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A Claude Code plugin (`dev-skills`) that provides four slash-command skills for development workflows: `/pr`, `/design`, `/design-review`, and `/branch-review`. There is no build system, no tests, and no dependencies — the repo is purely markdown-based skill definitions.
+A Claude Code plugin (`dev-skills`) that provides six slash-command skills for development workflows: `/pr`, `/design`, `/design-review`, `/design-review-loop`, `/branch-review`, and `/branch-review-loop`. There is no build system, no tests, and no dependencies — the repo is purely markdown-based skill definitions.
 
 ## Architecture
 
@@ -14,7 +14,9 @@ skills/
   pr/SKILL.md                — lint/test runner + PR creation workflow
   design/SKILL.md            — codebase research → design plan writer
   design-review/SKILL.md     — plan reviewer with parallel verification agents
+  design-review-loop/SKILL.md — iterative review→fix loop wrapping design-review until convergence
   branch-review/SKILL.md     — branch diff reviewer with parallel verification agents
+  branch-review-loop/SKILL.md — iterative review→fix loop wrapping branch-review until convergence
 ```
 
 Each `SKILL.md` has YAML frontmatter (`name`, `description`, `argument-hint`, `allowed-tools`) followed by the full skill prompt. Skills are self-contained — each file defines the complete behavior for its slash command.

@@ -65,12 +65,6 @@ At the end, note how many candidates were dismissed as false positives (no need 
 
 ### Phase 5: Act on results
 
-If there are confirmed issues, ask the user to choose:
+If there are confirmed issues, ask the user whether they want the fixes applied.
 
-1. **Copy to clipboard** — copy the confirmed issues list to clipboard using the platform-appropriate command (see below). Keep it terse — one line per issue, no markdown formatting in the clipboard version.
-2. **Fix them** — apply fixes for all confirmed issues directly in the code. For each fix, explain what you're changing and why before editing.
-
-**Clipboard detection:** To copy to clipboard, detect the platform and use the correct command:
-- **WSL/Windows**: `clip.exe`
-- **macOS**: `pbcopy`
-- **Linux**: `xclip -selection clipboard` or `xsel --clipboard --input`
+If yes, apply fixes for all confirmed issues directly in the code. For each fix, explain what you're changing and why before editing.
