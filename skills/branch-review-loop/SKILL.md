@@ -2,7 +2,7 @@
 name: branch-review-loop
 description: Iteratively review and fix the current branch until it converges (no substantive issues remain)
 argument-hint: "[base-branch]"
-allowed-tools: Read, Bash(git *), Bash(echo *), Task
+allowed-tools: Read, Bash(git *), Bash(echo *), Bash(dirname *), Task
 ---
 
 # Branch Review Loop — Review → Fix → Repeat Until Clean
@@ -50,7 +50,7 @@ bookkeeping; the reviewer never sees it.
 4. Resolve the absolute path to the companion `branch-review` skill. The reviewer runs as a
    subagent, which cannot use the Skill tool and does not share this skill's working directory,
    so it must be given an absolute filesystem path:
-   !`echo "${CLAUDE_SKILL_DIR%/*}/branch-review/SKILL.md"`
+   !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
    Use this absolute path wherever the reviewer prompt below says `<review skill path>`.
 5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 

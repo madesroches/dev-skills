@@ -2,7 +2,7 @@
 name: design-review-loop
 description: Iteratively review and fix a design plan until it converges (no substantive issues remain)
 argument-hint: "<path to plan file>"
-allowed-tools: Read, Bash(git *), Bash(echo *), Task
+allowed-tools: Read, Bash(git *), Bash(echo *), Bash(dirname *), Task
 ---
 
 # Design Review Loop — Review → Fix → Repeat Until Clean
@@ -48,7 +48,7 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
 3. Resolve the absolute path to the companion `design-review` skill. The reviewer runs as a
    subagent, which cannot use the Skill tool and does not share this skill's working directory,
    so it must be given an absolute filesystem path:
-   !`echo "${CLAUDE_SKILL_DIR%/*}/design-review/SKILL.md"`
+   !`echo "$(dirname "$CLAUDE_SKILL_DIR")/design-review/SKILL.md"`
    Use this absolute path wherever the reviewer prompt below says `<review skill path>`.
 4. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
