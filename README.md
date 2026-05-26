@@ -9,7 +9,9 @@ Development workflow skills for Claude Code: PR creation, design planning, and c
 | `/pr` | Run project lints/tests (auto-discovered from CLAUDE.md), manage plan files, update changelog, and create a GitHub PR |
 | `/design` | Research the codebase and write a design plan to `tasks/` |
 | `/design-review` | Review a design plan document, verify issues against real code |
+| `/design-review-loop` | Iteratively review and fix a design plan until it converges |
 | `/branch-review` | Code review the current branch diff with verified-only findings |
+| `/branch-review-loop` | Iteratively review and fix the current branch until it converges |
 
 ## Conventions
 
