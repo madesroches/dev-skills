@@ -102,6 +102,11 @@ Otherwise, record this round's substantive issue summaries in `history` and cont
 
 ### Phase 3: Fix (per-round agent)
 
+Before spawning the fixer, print a summary of the substantive issues about to be fixed. Format it
+as a short numbered list — one line per issue: `file: summary → fix`. Label it clearly, e.g.
+`Round N — fixing X issue(s):`. This gives the user visibility into what is being changed before
+any edits happen.
+
 Spawn a fixer agent with: the base branch and the **substantive** issues from this round (summary,
 location, why, fix for each). Instruct it to:
 
