@@ -129,14 +129,15 @@ actually fixed — not a generic round label. Build it from the fixer's reported
      summarize the theme rather than cramming each into the subject.
    - **Body**: one bullet per edit the fixer reported (its one-line descriptions), so the diff is
      self-documenting.
-2. Write that message to `.git/REVIEW_LOOP_COMMIT_MSG` using the **Write** tool. Do **not** pass the
+2. Write that message to `/tmp/REVIEW_LOOP_COMMIT_MSG` using the **Write** tool. Do **not** pass the
    message inline with `git commit -m`: a meaningful message contains quotes, backticks, and other
    shell metacharacters that the command-safety checker flags, which would stall this autonomous
    loop on a permission prompt. Writing to a file and committing with `-F` keeps the bash command
-   free of any message text.
+   free of any message text. Use `/tmp/REVIEW_LOOP_COMMIT_MSG` (absolute path) — the Write tool
+   requires absolute paths.
 3. Stage only the files the fixer changed, by explicit path: `git add <file> [<file> ...]`. Avoid
    `git add -A` so unrelated working-tree changes never sneak into the round commit.
-4. Commit: `git commit -F .git/REVIEW_LOOP_COMMIT_MSG`.
+4. Commit: `git commit -F /tmp/REVIEW_LOOP_COMMIT_MSG`.
 5. Record the new commit's short SHA and subject for the final summary, then return to **Phase 1**
    with a fresh reviewer agent.
 
