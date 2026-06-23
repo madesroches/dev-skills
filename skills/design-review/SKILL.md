@@ -32,6 +32,7 @@ Scan the plan for potential problems:
 - **Missing error handling** at system boundaries
 - **Test strategy gaps** — untestable designs, missing edge cases, no integration coverage
 - **Performance concerns** — N+1 queries, unnecessary re-renders, unbounded data structures
+- **Documentation gaps** — public APIs, config options, or architectural decisions introduced by the plan that lack corresponding docs; existing docs (READMEs, guides) that reference affected areas and would become stale
 
 For each candidate, write a one-line summary and note which plan section is involved.
 
@@ -54,6 +55,7 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Is the "missing step" truly missing, or is it handled implicitly by existing code or tooling?
    - Is the "over-engineering" concern valid, or does the complexity serve a real need evident in the codebase?
    - Are there existing patterns or utilities the plan overlooks that would simplify or invalidate a step?
+   - For documentation candidates: does a relevant doc file exist? Does it cover the area being changed? Would it become inaccurate if the plan were implemented as written?
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation
 
 Launch all agents in a single message so they run concurrently. Collect all results before proceeding.
