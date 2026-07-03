@@ -33,9 +33,13 @@ bookkeeping; the reviewer never sees it.
   findings to detect non-convergence, commits after each fix, and writes the final summary. It
   does **not** review or edit code itself.
 - **Reviewer agent** — a fresh `Task` agent (`subagent_type: "general-purpose"`) spawned each
-  round. Runs `branch-review` Phases 1–4 only and returns a structured issue list.
-- **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`) spawned each round that
-  has substantive issues. Edits the code to resolve them and reports what it changed.
+  round. Runs `branch-review` Phases 1–4 only and returns a structured issue list. Uses whatever
+  model the user currently has set — no override — since review quality should track the user's
+  own model choice, not a fixed tier.
+- **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`) spawned
+  each round that has substantive issues. Edits the code to resolve them and reports what it
+  changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
+  sufficient and keeps the loop cheaper.
 
 ## Process
 
@@ -60,8 +64,9 @@ Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
 
 ### Phase 1: Review (fresh agent)
 
-Increment `N`. Spawn a **new** reviewer agent. Its prompt must contain **only** the base branch
-and the instructions below — never the findings or context from previous rounds.
+Increment `N`. Spawn a **new** reviewer agent (no `model` override — inherits the user's
+current model). Its prompt must contain **only** the base branch and the instructions below —
+never the findings or context from previous rounds.
 
 > Run the `branch-review` skill's process (Phases 1–4) on the current branch against base `<base>`.
 > Read the review process from the file at `<review skill path>` and follow it exactly for Phases
@@ -107,8 +112,8 @@ as a short numbered list — one line per issue: `file: summary → fix`. Label 
 `Round N — fixing X issue(s):`. This gives the user visibility into what is being changed before
 any edits happen.
 
-Spawn a fixer agent with: the base branch and the **substantive** issues from this round (summary,
-location, why, fix for each). Instruct it to:
+Spawn a fixer agent with `model: "sonnet"`, passing: the base branch and the **substantive**
+issues from this round (summary, location, why, fix for each). Instruct it to:
 
 > For each issue, edit the code to resolve it. Apply the suggested fix or a better one if the
 > suggestion is wrong. Keep edits minimal and localized — change only what the issue requires; do
