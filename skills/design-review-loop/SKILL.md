@@ -2,7 +2,7 @@
 name: design-review-loop
 description: Iteratively review and fix a design plan until it converges (no substantive issues remain)
 argument-hint: "<path to plan file>"
-allowed-tools: Read, Write, Bash(git *), Bash(echo *), Bash(dirname *), Task
+allowed-tools: Read, Write, Bash(git *), Bash(echo *), Bash(dirname *), Bash(mktemp *), Task
 ---
 
 # Design Review Loop — Review → Fix → Repeat Until Clean
@@ -56,7 +56,12 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
    so it must be given an absolute filesystem path:
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/design-review/SKILL.md"`
    Use this absolute path wherever the reviewer prompt below says `<review skill path>`.
-4. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
+4. Generate a unique path for the round commit-message scratch file. The Write tool requires an
+   absolute path, but a fixed name under `/tmp` collides if the user runs this loop on another
+   branch or worktree at the same time — so mint one per invocation:
+   !`mktemp -u /tmp/design-review-loop-commit-msg.XXXXXX`
+   Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
+5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
 Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
 
@@ -132,14 +137,13 @@ actually fixed — not a generic round label. Build it from the fixer's reported
      summarize the theme rather than cramming each into the subject.
    - **Body**: one bullet per edit the fixer reported (its one-line descriptions), so the diff is
      self-documenting.
-2. Write that message to `/tmp/REVIEW_LOOP_COMMIT_MSG` using the **Write** tool. Do **not** pass the
-   message inline with `git commit -m`: a meaningful message contains quotes, backticks, and other
-   shell metacharacters that the command-safety checker flags, which would stall this autonomous
-   loop on a permission prompt. Writing to a file and committing with `-F` keeps the bash command
-   free of any message text. Use `/tmp/REVIEW_LOOP_COMMIT_MSG` (absolute path) — the Write tool
-   requires absolute paths.
+2. Write that message to `<commit msg path>` (from Phase 0) using the **Write** tool. Do **not**
+   pass the message inline with `git commit -m`: a meaningful message contains quotes, backticks,
+   and other shell metacharacters that the command-safety checker flags, which would stall this
+   autonomous loop on a permission prompt. Writing to a file and committing with `-F` keeps the
+   bash command free of any message text.
 3. Stage the plan file only — do not stage unrelated changes: `git add <plan file>`.
-4. Commit: `git commit -F /tmp/REVIEW_LOOP_COMMIT_MSG`.
+4. Commit: `git commit -F <commit msg path>`.
 5. Record the new commit's short SHA and subject for the final summary, then return to **Phase 1**
    with a fresh reviewer agent.
 
