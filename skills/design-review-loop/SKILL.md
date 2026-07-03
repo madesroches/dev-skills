@@ -63,7 +63,7 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
    Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
 5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
-Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
+Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
 ### Phase 1: Review (fresh agent)
 

@@ -2,7 +2,7 @@
 name: design
 description: Research and write a design plan to tasks/ folder
 argument-hint: "<feature description, issue link, or context>"
-allowed-tools: Read, Glob, Grep, Bash(git log *), Bash(git diff *), Bash(git show *), Bash(ls *), WebFetch, WebSearch, Write, Edit, Task
+allowed-tools: Read, Glob, Grep, Bash(git log *), Bash(git diff *), Bash(git show *), Bash(ls *), Bash(gh issue view *), WebFetch, WebSearch, Write, Edit, Task
 ---
 
 # Design — Research and Write a Plan

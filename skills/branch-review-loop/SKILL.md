@@ -49,8 +49,10 @@ bookkeeping; the reviewer never sees it.
    (`git rev-parse --verify <base>`); if not, ask the user and stop.
 2. Confirm there is a diff to review (`git diff <base>..HEAD --stat`). If empty, report and stop.
 3. The fixer commits code each round, so the working tree must be clean. Run `git status --short`.
-   If there are uncommitted changes, commit them first so round commits are isolated (do not stash —
-   the reviewer reviews committed state). Run as two separate calls: `git add -A`, then
+   If there are uncommitted changes, show that output to the user and commit them first so round
+   commits are isolated (do not stash — the reviewer reviews committed state). Stage by explicit
+   path from the `git status --short` output — tracked and untracked alike — never `git add -A`,
+   so nothing sweeps in silently. Run as two separate calls: `git add <file> [<file> ...]`, then
    `git commit -m "branch-review-loop: baseline"`. (A fixed string like this is safe inline; the
    meaningful per-round messages in Phase 4 are not — see there.)
 4. Resolve the absolute path to the companion `branch-review` skill. The reviewer runs as a
@@ -65,7 +67,7 @@ bookkeeping; the reviewer never sees it.
    Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
 6. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
-Set a round cap of **5** unless the user specified otherwise in `$ARGUMENTS`.
+Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
 ### Phase 1: Review (fresh agent)
 

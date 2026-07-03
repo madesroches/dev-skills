@@ -2,7 +2,7 @@
 name: branch-review
 description: Code review the current branch with verified issues only
 argument-hint: "[base-branch]"
-allowed-tools: Bash(git *), Edit, Read, Glob, Grep, Write, Task
+allowed-tools: Bash(git log *), Bash(git diff *), Edit, Read, Glob, Grep, Write, Task
 ---
 
 # Code Review — Verified Issues Only
