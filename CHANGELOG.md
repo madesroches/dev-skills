@@ -4,6 +4,7 @@ All notable changes to the `dev-skills` plugin are documented in this file.
 
 ## [Unreleased]
 
+- Add `ship-issue` skill: chain design → design-review-loop → implement-and-review → pr for a GitHub issue
 - Ask about dirty tree before branching; handle detached HEAD in preflight
 - Allow `AskUserQuestion` and ask before baseline-committing a dirty tree
 

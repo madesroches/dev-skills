@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A Claude Code plugin (`dev-skills`) that provides seven slash-command skills for development workflows: `/pr`, `/design`, `/design-review`, `/design-review-loop`, `/branch-review`, `/branch-review-loop`, and `/implement-and-review`. There is no build system, no tests, and no dependencies — the repo is purely markdown-based skill definitions.
+A Claude Code plugin (`dev-skills`) that provides eight slash-command skills for development workflows: `/pr`, `/design`, `/design-review`, `/design-review-loop`, `/branch-review`, `/branch-review-loop`, `/implement-and-review`, and `/ship-issue`. There is no build system, no tests, and no dependencies — the repo is purely markdown-based skill definitions.
 
 ## Architecture
 
@@ -18,6 +18,7 @@ skills/
   branch-review/SKILL.md     — branch diff reviewer with parallel verification agents
   branch-review-loop/SKILL.md — iterative review→fix loop wrapping branch-review until convergence
   implement-and-review/SKILL.md — implements a plan (sonnet), commits, then runs branch-review-loop (opus) on the result
+  ship-issue/SKILL.md          — chains design → design-review-loop → implement-and-review → pr for a GitHub issue
 ```
 
 Each `SKILL.md` has YAML frontmatter (`name`, `description`, `argument-hint`, `allowed-tools`) followed by the full skill prompt. Skills are self-contained — each file defines the complete behavior for its slash command.
@@ -29,4 +30,5 @@ Each `SKILL.md` has YAML frontmatter (`name`, `description`, `argument-hint`, `a
 - `/design-review` and `/branch-review` both use a **candidate → parallel verification → report** pattern: identify potential issues, verify each against real code using parallel Explore agents, then report only confirmed issues.
 - Skills declare their tool allowlists in frontmatter. When editing a skill, keep `allowed-tools` in sync with what the prompt actually uses.
 - `/implement-and-review` is a composite skill: it doesn't restate `branch-review-loop`'s logic, it reads that skill's file at its resolved absolute path and follows it directly, with several deviations — the reviewer's model is overridden to `opus`, the round cap is raised to 10 (vs. the loop's default 5), and the loop's own Phase 0 step 4 (resolving `<review skill path>`) is skipped in favor of the path this skill already resolved in its own Phase 0. It also appends its own Phase 3 finalize pass, with no counterpart in the loop, that fixes anything the loop left unresolved (trivial issues, or substantive ones left open by a non-clean stop) and commits. If `branch-review-loop` changes, this skill inherits the change automatically.
+- `/ship-issue` is a composite skill that, unlike `/implement-and-review`, needs **no deviation** from the skills it chains, so it composes by invoking each one **directly via the `Skill` tool** (`design` → `design-review-loop` → `implement-and-review` → `pr`) rather than reading their files as text. Its own work is limited to preflight (fetch the issue, create the feature branch up front so all downstream commits land on it), committing the plan once, and injecting a `**GitHub Issue**:` line into the plan so `/pr` can auto-link the issue. It fail-stops between stages (no plan produced, implementer blocked, or `/pr` checks failing) and inherits any sub-skill change automatically.
 - No skill or subagent in this repo should add `Co-Authored-By` lines or other AI attribution to commits — this is an explicit user requirement, not an omission.
