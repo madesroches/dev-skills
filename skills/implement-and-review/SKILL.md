@@ -2,7 +2,7 @@
 name: implement-and-review
 description: Implement a design plan, commit it, then iteratively review and fix the branch with a stronger model until it converges
 argument-hint: "<path to plan file>"
-allowed-tools: Read, Write, Bash(git *), Bash(dirname *), Bash(mktemp *), Bash(echo *), Task
+allowed-tools: Read, Write, Bash(git *), Bash(dirname *), Bash(mktemp *), Bash(echo *), Task, AskUserQuestion
 ---
 
 # Implement and Review — Build a Plan, Then Harden It
@@ -50,9 +50,11 @@ skill exists specifically to pair fast implementation with a stronger, independe
    spaces/underscores, extension stripped) and run `git checkout -b <slug>`. If the current
    branch is already something other than `<base>`, skip this — implement directly on it.
 3. `git status --short` — the implementer commits its own changes, so the tree should be
-   clean first. If there are uncommitted changes, show them to the user and commit them as a
-   baseline so the implementation commit stays isolated. Stage by explicit path from the
-   `git status --short` output — never `git add -A`. Run as two separate calls:
+   clean first. If there are uncommitted changes, show that output to the user and ask with
+   AskUserQuestion whether to commit them as a baseline or stop — they may be unrelated WIP the
+   user does not want swept into this run's history. If they choose to stop, stop. If they choose
+   to commit: stage by explicit path from the `git status --short` output — tracked and untracked
+   alike — never `git add -A`, so nothing sweeps in silently. Run as two separate calls:
    `git add <file> [<file> ...]`, then `git commit -m "implement-and-review: baseline"`.
 4. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
    `$CLAUDE_SKILL_DIR` here points at this skill's own directory, not that one):
