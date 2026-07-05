@@ -20,6 +20,12 @@ Review the design plan at `$ARGUMENTS`.
 ### Phase 2: Identify candidate issues
 
 Scan the plan for potential problems:
+- **Unresolved open questions** — every entry in the plan's `## Open Questions` section, plus any
+  inline `TBD` / `TODO` / "decide later" markers. Treat each as a candidate to **resolve**, not
+  merely to flag: most open questions a plan raises are answerable from the codebase itself — an
+  existing pattern, interface, or precedent in `tasks/completed/` usually settles them. These are
+  candidates like any other and go through Phase 3 verification, where the agent investigates and
+  proposes a concrete answer.
 - **Incorrect assumptions** about existing code (wrong file paths, misunderstood interfaces, stale references)
 - **Missing steps** — changes that would be needed but aren't listed (e.g., updating imports, adding exports, migrations)
 - **Ordering errors** — steps that depend on something introduced in a later step
@@ -56,7 +62,8 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Is the "over-engineering" concern valid, or does the complexity serve a real need evident in the codebase?
    - Are there existing patterns or utilities the plan overlooks that would simplify or invalidate a step?
    - For documentation candidates: does a relevant doc file exist? Does it cover the area being changed? Would it become inaccurate if the plan were implemented as written?
-4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation
+   - For open-question candidates: search the codebase for the answer — an existing pattern, interface, type, or precedent that determines it. Return a **concrete resolution** when the code settles it. Only when the question is a genuine product/policy decision the code cannot answer (e.g. a UX choice, a business rule) should it be left for the user — say so explicitly.
+4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation. For open-question candidates the verdict is instead **resolved** (with the concrete answer the code supports) or **needs user decision** (with why the codebase can't settle it).
 
 Launch all agents in a single message so they run concurrently. Collect all results before proceeding.
 
@@ -67,6 +74,13 @@ Output a concise list of **confirmed issues only**. For each:
 - Plan section reference
 - Why it's a real problem (what you verified against the code)
 - Suggested fix (one sentence)
+
+For **resolved open questions**, report each as a confirmed issue whose suggested fix is: fold the
+concrete answer into the relevant plan section and remove the item from `## Open Questions`. An open
+question that the code answers is a real, fixable gap — surface it so it gets closed, not left
+lingering. For a question that genuinely **needs a user decision**, report it separately as such
+(with why the codebase can't settle it) so it stays in `## Open Questions` for the user rather than
+being treated as a fixable issue.
 
 At the end, note how many candidates were dismissed as false positives (no need to list them individually unless the user asks).
 

@@ -2,6 +2,12 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.9.0] - 2026-07-04
+
+- Stop `ship-issue` from halting after design: run the chain autonomously, pausing only on hard blockers
+- Open questions are no longer a stop condition — `design-review` resolves them from the codebase
+- `design-review` treats plan open questions as candidates to answer; loop folds answers in or flags user-decision ones
+
 ## [1.8.0] - 2026-07-04
 
 - Add `ship-issue` skill: chain design → design-review-loop → implement-and-review → pr for a GitHub issue

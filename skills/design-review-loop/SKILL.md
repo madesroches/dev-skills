@@ -86,6 +86,13 @@ never the findings or context from previous rounds.
 > - `why`: what you verified against the code that makes it a real problem
 > - `fix`: the suggested fix in one sentence
 >
+> Open questions in the plan are part of this review (see `design-review` Phase 2). A **resolved**
+> open question — one the codebase answers — is `substantive`: its `fix` is to fold the concrete
+> answer into the relevant section and clear it from `## Open Questions`. An open question that
+> genuinely **needs a user decision** (the code cannot settle it) is `trivial`, with `section`
+> set to `Open Questions` and `why` explaining why only the user can decide — it must be reported
+> so the loop can surface it, but never fixed and never counted as a design flaw.
+>
 > If there are no confirmed issues, return exactly `NO ISSUES`.
 
 Collect the reviewer's structured result.
@@ -161,6 +168,9 @@ When the loop ends, output a concise report:
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Remaining issues** — any trivial issues from the last review, and (if the loop stopped on cap
   or non-convergence) the unresolved substantive issues, so the user can decide what to do next.
+- **Open questions left for the user** — any open questions the reviewer marked as needing a user
+  decision (still in `## Open Questions`). Call these out explicitly rather than burying them among
+  trivial issues — they are the one thing the autonomous loop deliberately does not resolve.
 - **Commits** — the per-round fix commits created (short SHA + subject line), so the user can
   review or revert the diff.
 

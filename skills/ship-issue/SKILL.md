@@ -18,6 +18,31 @@ implement code, or open the PR — each of those is delegated to the correspondi
 work is limited to preflight (fetch the issue, create the branch), one commit of the plan file,
 and relaying each stage's outcome.
 
+## Autonomy — run the whole chain without pausing
+
+This chain is **autonomous end to end**. Once preflight succeeds, run every phase to completion in
+one continuous pass, moving straight from each stage into the next **in the same turn** — do not
+yield the turn to the user between phases. A brief summary of a stage's outcome is fine, but it
+must be immediately followed by the next stage; it is never a place to stop and wait.
+
+The **only** things that stop the chain are the hard blockers enumerated per phase: no issue
+reference given, the issue can't be fetched, `design` produced **no plan file at all**,
+`implement-and-review`'s implementer was **blocked**, or `pr`'s checks failed. Nothing else halts
+it. In particular:
+
+- **Open questions are not a stop condition.** `design` routinely lists open questions in its
+  output — that is normal, and it does not mean the plan is incomplete. Resolving them is the job of
+  the next stage: `design-review` treats every open question as a candidate to answer from the
+  codebase, and the `design-review-loop` fixer folds those answers into the plan. Only the rare
+  open question the code genuinely cannot settle is left in `## Open Questions` for the user. So do
+  not stop, and do not ask the user to answer open questions, just because `design` surfaced them —
+  hand them to Phase 2.
+- The one exception is a genuine **hard requirement for the user's judgment** — a decision the
+  chain cannot make on its own without risking wrong or destructive work (e.g. an irreversible
+  action, or ambiguity that would send the whole implementation down the wrong path). Only then
+  pause with `AskUserQuestion`. A routine open question or a plan the user might merely *prefer* to
+  tweak does not qualify.
+
 ## Why direct `Skill` invocation (and not read-as-text)
 
 `implement-and-review` reads `branch-review-loop`'s file and follows it as *text* because it must
@@ -81,10 +106,14 @@ Because nothing is restated, any change to a sub-skill's process is inherited au
 
 1. Invoke the `design` skill via the `Skill` tool, passing the **issue reference** (`$ARGUMENTS`)
    as its arguments. Let it fetch the issue and write the plan; do not pre-empt its research.
-2. Capture the plan file path from `design`'s output (its Phase 5 reports the path). If `design`
-   did not produce a plan — because it stopped with open questions, could not fetch the issue, or
-   otherwise blocked — relay that to the user and **stop**. Do not fabricate a plan path or proceed
-   to review.
+2. Capture the plan file path from `design`'s output (its Phase 5 reports the path). A plan that
+   lists **open questions** is still a complete plan — `design` surfaces open questions as a normal
+   part of its Phase 5 output, and they are resolved downstream by `design-review-loop` and
+   `implement-and-review`, not by pausing here. Open questions are **not** a stop condition, and are
+   never a reason to ask the user anything at this point. Stop **only** if `design` produced no plan
+   file at all — e.g. it could not fetch the issue or was otherwise hard-blocked — in which case
+   relay that and **stop**. Do not fabricate a plan path, and otherwise proceed immediately to
+   step 3 without yielding the turn.
 3. **Record the issue link in the plan** so the downstream `pr` skill can auto-link it. Read the
    plan file. If it does not already contain a `**GitHub Issue**:` line near the top, insert one
    in the plan's header — on its own line just below the `# <Title> Plan` heading — using the
@@ -144,9 +173,11 @@ Report the whole chain concisely:
   review-loop round, and the implementation on one branch. Do not defer branch creation to
   `implement-and-review` — by then the plan and review commits would already have landed on
   `<base>`.
-- **Fail-stop between stages.** Stop and hand back if `design` produced no plan, if
-  `implement-and-review`'s implementer was blocked, or if `pr`'s checks failed. Never carry a
-  broken chain forward into a PR.
+- **Fail-stop between stages, but only on hard blockers.** Stop and hand back only if `design`
+  produced no plan file at all, if `implement-and-review`'s implementer was blocked, or if `pr`'s
+  checks failed — never carry a broken chain forward into a PR. Everything short of those (open
+  questions, minor review findings, non-clean loop stops) is carried forward, not stopped on. See
+  **Autonomy** above.
 - **No AI attribution** on the one commit this skill makes (the plan commit) — and the sub-skills
   already enforce the same for every commit they make.
 - **No restated logic.** Every stage is a direct `Skill` invocation with no per-skill deviation,
