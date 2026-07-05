@@ -42,25 +42,30 @@ skill exists specifically to pair fast implementation with a stronger, independe
    not found, say so and stop — do not guess a plan.
 2. Resolve the repo's base branch: `git symbolic-ref --short refs/remotes/origin/HEAD`,
    stripping the `origin/` prefix; if that fails (no remote HEAD configured), fall back to
-   `main`. Use this as `<base>` here and in Phase 2. Then check the current branch:
-   `git branch --show-current`. If it is `<base>`, the implementer must not commit directly to
-   it — create a feature branch first, before any other Phase 0 step touches the tree, so the
-   baseline commit (step 3) and every later commit land on the new branch instead of `<base>`.
-   Derive a short slug from the plan file's basename (lowercase, hyphens in place of
-   spaces/underscores, extension stripped) and run `git checkout -b <slug>`. If the current
-   branch is already something other than `<base>`, skip this — implement directly on it.
+   `main`. Use this as `<base>` here and in Phase 2.
 3. `git status --short` — the implementer commits its own changes, so the tree should be
    clean first. If there are uncommitted changes, show that output to the user and ask with
    AskUserQuestion whether to commit them as a baseline or stop — they may be unrelated WIP the
-   user does not want swept into this run's history. If they choose to stop, stop. If they choose
-   to commit: stage by explicit path from the `git status --short` output — tracked and untracked
-   alike — never `git add -A`, so nothing sweeps in silently. Run as two separate calls:
+   user does not want swept into this run's history. If they choose to stop, stop here, before
+   touching any branch — nothing has been created or switched yet, so stopping leaves the tree
+   exactly as found. If they choose to commit, or the tree is already clean, continue to the
+   next step.
+4. Check the current branch: `git branch --show-current`. If it is `<base>`, or empty (detached
+   HEAD — `--show-current` prints nothing there, which would otherwise be mistaken for "already
+   on a feature branch"), the implementer must not commit directly onto it — create a feature
+   branch first, before any commit below or in later phases lands. Derive a short slug from the
+   plan file's basename (lowercase, hyphens in place of spaces/underscores, extension stripped)
+   and run `git checkout -b <slug>`. If the current branch is already something other than
+   `<base>` and not detached, skip this — implement directly on it.
+5. If step 3 called for a baseline commit, make it now, on top of the branch from step 4: stage
+   by explicit path from the `git status --short` output — tracked and untracked alike — never
+   `git add -A`, so nothing sweeps in silently. Run as two separate calls:
    `git add <file> [<file> ...]`, then `git commit -m "implement-and-review: baseline"`.
-4. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
+6. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
    `$CLAUDE_SKILL_DIR` here points at this skill's own directory, not that one):
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review-loop/SKILL.md"`
    Use this absolute path wherever Phase 2 below says `<loop skill path>`.
-5. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
+7. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
    skill's own Phase 0 — do not rely on `branch-review-loop`'s own Phase 0 step 4 to do this when
    its file is merely read and followed as text rather than invoked as a skill — its `!`-prefixed
    command does not execute, and `$CLAUDE_SKILL_DIR` cannot be trusted to still point at
@@ -68,11 +73,11 @@ skill exists specifically to pair fast implementation with a stronger, independe
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
    Use this absolute path as `<review skill path>` wherever the loop file (followed in Phase 2)
    says `<review skill path>` — do not let the loop file's own (inert) Phase 0 step 4 resolve it.
-6. Generate a unique scratch path for the implementer's commit message (a fixed name under
+8. Generate a unique scratch path for the implementer's commit message (a fixed name under
    `/tmp` would collide across concurrent invocations):
    !`mktemp -u /tmp/implement-and-review-impl-commit-msg.XXXXXX`
    Use this exact path as `<impl commit msg path>`.
-7. Generate a unique scratch path for the finalize commit message:
+9. Generate a unique scratch path for the finalize commit message:
    !`mktemp -u /tmp/implement-and-review-finalize-commit-msg.XXXXXX`
    Use this exact path as `<finalize commit msg path>`.
 
@@ -114,7 +119,7 @@ deviations, which take precedence over the loop file's own wording wherever they
 
 > Skip that skill's own Phase 0 step 4 (resolving `<review skill path>`) — it is a no-op here
 > since that file is being followed as text, not invoked as a skill. Use the `<review skill
-> path>` already resolved in this skill's own Phase 0 step 5 instead, everywhere the loop file
+> path>` already resolved in this skill's own Phase 0 step 7 instead, everywhere the loop file
 > says `<review skill path>`.
 >
 > In that skill's Phase 1, spawn the reviewer agent with `model: "opus"` explicitly — this
