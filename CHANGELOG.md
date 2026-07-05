@@ -2,6 +2,10 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## Unreleased
+
+- `ship-issue` reminds the user up front to give an explicit push instruction when the invocation lacks one, so the final push (and CI) isn't gated by the permission layer
+
 ## [1.9.0] - 2026-07-04
 
 - Stop `ship-issue` from halting after design: run the chain autonomously, pausing only on hard blockers
