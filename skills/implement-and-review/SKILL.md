@@ -40,13 +40,15 @@ skill exists specifically to pair fast implementation with a stronger, independe
 
 1. Confirm `$ARGUMENTS` is provided and points to an existing file. Read it. If missing or
    not found, say so and stop — do not guess a plan.
-2. Check the current branch: `git branch --show-current`. If it is the base branch (`main`),
-   the implementer must not commit directly to it — create a feature branch first, before any
-   other Phase 0 step touches the tree, so the baseline commit (step 3) and every later commit
-   land on the new branch instead of `main`. Derive a short slug from the plan file's basename
-   (lowercase, hyphens in place of spaces/underscores, extension stripped) and run
-   `git checkout -b <slug>`. If the current branch is already something other than `main`, skip
-   this — implement directly on it.
+2. Resolve the repo's base branch: `git symbolic-ref --short refs/remotes/origin/HEAD`,
+   stripping the `origin/` prefix; if that fails (no remote HEAD configured), fall back to
+   `main`. Use this as `<base>` here and in Phase 2. Then check the current branch:
+   `git branch --show-current`. If it is `<base>`, the implementer must not commit directly to
+   it — create a feature branch first, before any other Phase 0 step touches the tree, so the
+   baseline commit (step 3) and every later commit land on the new branch instead of `<base>`.
+   Derive a short slug from the plan file's basename (lowercase, hyphens in place of
+   spaces/underscores, extension stripped) and run `git checkout -b <slug>`. If the current
+   branch is already something other than `<base>`, skip this — implement directly on it.
 3. `git status --short` — the implementer commits its own changes, so the tree should be
    clean first. If there are uncommitted changes, show them to the user and commit them as a
    baseline so the implementation commit stays isolated. Stage by explicit path from the
@@ -104,7 +106,8 @@ couldn't resolve), stop here and report the blocker to the user instead of proce
 
 Confirm the implementer's commit landed (`git log --oneline -1`). Then carry out the
 `branch-review-loop` process yourself, in this same context, exactly as written in the file at
-`<loop skill path>` — its Phases 0 through 5, targeting base branch `main` — with these
+`<loop skill path>` — its Phases 0 through 5, targeting base branch `<base>` (resolved in
+this skill's Phase 0 step 2) — with these
 deviations, which take precedence over the loop file's own wording wherever they conflict with it:
 
 > Skip that skill's own Phase 0 step 4 (resolving `<review skill path>`) — it is a no-op here

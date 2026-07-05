@@ -2,12 +2,13 @@
 name: branch-review-loop
 description: Iteratively review and fix the current branch until it converges (no substantive issues remain)
 argument-hint: "[base-branch]"
-allowed-tools: Read, Write, Bash(git *), Bash(echo *), Bash(dirname *), Bash(mktemp *), Task
+allowed-tools: Read, Write, Bash(git *), Bash(echo *), Bash(dirname *), Bash(mktemp *), Task, AskUserQuestion
 ---
 
 # Branch Review Loop — Review → Fix → Repeat Until Clean
 
-Iteratively harden the current branch against `$ARGUMENTS` (default: `main`). Each round, a
+Iteratively harden the current branch against `$ARGUMENTS` (default: the repo's default
+branch — see Phase 0). Each round, a
 **fresh** reviewer agent runs the `branch-review` process against the branch's *current* diff,
 then a fixer agent applies the confirmed fixes in the code. The loop ends when a round surfaces
 no substantive issues, when the work stops converging, or when a round cap is hit.
@@ -45,14 +46,20 @@ bookkeeping; the reviewer never sees it.
 
 ### Phase 0: Preflight
 
-1. Resolve the base branch from `$ARGUMENTS` (default `main`). Confirm it exists
+1. Resolve the base branch from `$ARGUMENTS`; if none is given, use the repo's default branch
+   (`git symbolic-ref --short refs/remotes/origin/HEAD`, stripping the `origin/` prefix; fall
+   back to `main` if no remote HEAD is configured). Confirm it exists
    (`git rev-parse --verify <base>`); if not, ask the user and stop.
-2. Confirm there is a diff to review (`git diff <base>..HEAD --stat`). If empty, report and stop.
+2. Confirm there is a diff to review (`git diff <base>...HEAD --stat` — three-dot, matching how
+   `branch-review` diffs from the merge-base). If empty, report and stop.
 3. The fixer commits code each round, so the working tree must be clean. Run `git status --short`.
-   If there are uncommitted changes, show that output to the user and commit them first so round
-   commits are isolated (do not stash — the reviewer reviews committed state). Stage by explicit
-   path from the `git status --short` output — tracked and untracked alike — never `git add -A`,
-   so nothing sweeps in silently. Run as two separate calls: `git add <file> [<file> ...]`, then
+   If there are uncommitted changes, show that output to the user and ask with AskUserQuestion
+   whether to commit them as a baseline or stop — they may be unrelated WIP the user does not
+   want swept into this loop's history. (This is preflight; the no-prompting rule only applies
+   once the loop is running.) If they choose to stop, stop. If they choose to commit (do not
+   stash — the reviewer reviews committed state): stage by explicit path from the
+   `git status --short` output — tracked and untracked alike — never `git add -A`, so nothing
+   sweeps in silently. Run as two separate calls: `git add <file> [<file> ...]`, then
    `git commit -m "branch-review-loop: baseline"`. (A fixed string like this is safe inline; the
    meaningful per-round messages in Phase 4 are not — see there.)
 4. Resolve the absolute path to the companion `branch-review` skill. The reviewer runs as a
@@ -141,6 +148,8 @@ actually fixed — not a generic round label. Build it from the fixer's reported
      summarize the theme rather than cramming each into the subject.
    - **Body**: one bullet per edit the fixer reported (its one-line descriptions), so the diff is
      self-documenting.
+   - **No AI attribution** — no `Co-Authored-By` lines and no agent credit, in this and every
+     other commit the loop makes (including the Phase 0 baseline).
 2. Write that message to `<commit msg path>` (from Phase 0) using the **Write** tool. Do **not**
    pass the message inline with `git commit -m`: a meaningful message contains quotes, backticks,
    and other shell metacharacters that the command-safety checker flags, which would stall this
