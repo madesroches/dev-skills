@@ -109,8 +109,8 @@ deviations, which take precedence over the loop file's own wording wherever they
 > and its restatement as an invariant in that skill's Notes; wherever the two conflict, this
 > skill's `opus` override wins. In its Phase 0, use a round cap of **10** instead of the default
 > 5. Everything else — the fixer's `model: "sonnet"`, the per-round commit behavior, the
-> convergence/stopping rules, and the final summary — applies unchanged, including its rule
-> against AI attribution in commit messages.
+> convergence/stopping rules, and the final summary — applies unchanged. As with every commit
+> this skill makes or causes to be made, round commits must carry no AI attribution.
 
 Since the tree is already clean after Phase 1's commit, that skill's own baseline-commit step
 in its Phase 0 will find nothing to do.
