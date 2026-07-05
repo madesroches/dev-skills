@@ -48,11 +48,19 @@ exists specifically to pair fast implementation with a stronger, independent rev
    `$CLAUDE_SKILL_DIR` here points at this skill's own directory, not that one):
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review-loop/SKILL.md"`
    Use this absolute path wherever Phase 2 below says `<loop skill path>`.
-4. Generate a unique scratch path for the implementer's commit message (a fixed name under
+4. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
+   skill's own Phase 0 — do not rely on `branch-review-loop`'s own Phase 0 step 4 to do this when
+   its file is merely read and followed as text rather than invoked as a skill, its `!`-prefixed
+   command does not execute, and `$CLAUDE_SKILL_DIR` cannot be trusted to still point at
+   `branch-review-loop`'s directory at that point:
+   !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
+   Use this absolute path as `<review skill path>` wherever the loop file (followed in Phase 2)
+   says `<review skill path>` — do not let the loop file's own (inert) Phase 0 step 4 resolve it.
+5. Generate a unique scratch path for the implementer's commit message (a fixed name under
    `/tmp` would collide across concurrent invocations):
    !`mktemp -u /tmp/implement-and-review-impl-commit-msg.XXXXXX`
    Use this exact path as `<impl commit msg path>`.
-5. Generate a unique scratch path for the finalize commit message:
+6. Generate a unique scratch path for the finalize commit message:
    !`mktemp -u /tmp/implement-and-review-finalize-commit-msg.XXXXXX`
    Use this exact path as `<finalize commit msg path>`.
 
@@ -88,13 +96,21 @@ couldn't resolve), stop here and report the blocker to the user instead of proce
 
 Confirm the implementer's commit landed (`git log --oneline -1`). Then carry out the
 `branch-review-loop` process yourself, in this same context, exactly as written in the file at
-`<loop skill path>` — its Phases 0 through 5, targeting base branch `main` — with two deviations:
+`<loop skill path>` — its Phases 0 through 5, targeting base branch `main` — with these
+deviations, which take precedence over the loop file's own wording wherever they conflict with it:
 
-> In that skill's Phase 1, spawn the reviewer agent with `model: "opus"` explicitly, instead of
-> the no-override behavior described there. In its Phase 0, use a round cap of **10** instead
-> of the default 5. Everything else — the fixer's `model: "sonnet"`, the per-round commit
-> behavior, the convergence/stopping rules, and the final summary — applies unchanged,
-> including its rule against AI attribution in commit messages.
+> Skip that skill's own Phase 0 step 4 (resolving `<review skill path>`) — it is a no-op here
+> since that file is being followed as text, not invoked as a skill. Use the `<review skill
+> path>` already resolved in this skill's own Phase 0 step 4 instead, everywhere the loop file
+> says `<review skill path>`.
+>
+> In that skill's Phase 1, spawn the reviewer agent with `model: "opus"` explicitly — this
+> overrides that phase's "no `model` override — inherits the user's current model" instruction
+> and its restatement as an invariant in that skill's Notes; wherever the two conflict, this
+> skill's `opus` override wins. In its Phase 0, use a round cap of **10** instead of the default
+> 5. Everything else — the fixer's `model: "sonnet"`, the per-round commit behavior, the
+> convergence/stopping rules, and the final summary — applies unchanged, including its rule
+> against AI attribution in commit messages.
 
 Since the tree is already clean after Phase 1's commit, that skill's own baseline-commit step
 in its Phase 0 will find nothing to do.
