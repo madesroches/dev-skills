@@ -13,6 +13,7 @@ Development workflow skills for Claude Code: PR creation, design planning, and c
 | `/branch-review` | Code review the current branch diff with verified-only findings |
 | `/branch-review-loop` | Iteratively review and fix the current branch until it converges |
 | `/implement-and-review` | Implement a design plan, commit it, then iteratively review and fix the branch with a stronger model until it converges |
+| `/ship-issue` | Take a GitHub issue through design, plan review, implementation, independent review, and a pull request in one chain |
 
 ## Conventions
 
