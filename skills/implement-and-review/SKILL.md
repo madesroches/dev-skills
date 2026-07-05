@@ -9,8 +9,8 @@ allowed-tools: Read, Write, Bash(git *), Bash(dirname *), Bash(mktemp *), Bash(e
 
 Implement the plan at `$ARGUMENTS`, commit the result, then run the `branch-review-loop`
 process against the resulting branch to catch and fix anything the implementation missed.
-The review loop runs under `opus` regardless of the session's current model — this skill
-exists specifically to pair fast implementation with a stronger, independent review pass.
+The review loop's reviewer runs under `opus` regardless of the session's current model — this
+skill exists specifically to pair fast implementation with a stronger, independent review pass.
 
 ## Roles
 
@@ -22,9 +22,10 @@ exists specifically to pair fast implementation with a stronger, independent rev
   sufficient for well-specified implementation work coming from a plan document.
 - **Review loop** — carried out by the orchestrator itself (not delegated to a subagent),
   following the `branch-review-loop` skill's process verbatim from its file on disk, so this
-  skill automatically inherits any change to that loop's logic. Two deviations: its Phase 1
-  reviewer agent is spawned with `model: "opus"` instead of no override, and its round cap
-  defaults to 10 instead of 5.
+  skill automatically inherits any change to that loop's logic. Three deviations: its Phase 1
+  reviewer agent is spawned with `model: "opus"` instead of no override, its round cap
+  defaults to 10 instead of 5, and its own Phase 0 step 4 (resolving `<review skill path>`) is
+  skipped in favor of the path already resolved in this skill's own Phase 0.
 - **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
   spawned once after the review loop ends, only if it left anything unresolved (the trivial
   issues it never fixes by design, plus any substantive issues still open because the loop hit
@@ -57,7 +58,7 @@ exists specifically to pair fast implementation with a stronger, independent rev
    Use this absolute path wherever Phase 2 below says `<loop skill path>`.
 5. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
    skill's own Phase 0 — do not rely on `branch-review-loop`'s own Phase 0 step 4 to do this when
-   its file is merely read and followed as text rather than invoked as a skill, its `!`-prefixed
+   its file is merely read and followed as text rather than invoked as a skill — its `!`-prefixed
    command does not execute, and `$CLAUDE_SKILL_DIR` cannot be trusted to still point at
    `branch-review-loop`'s directory at that point:
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
@@ -108,12 +109,12 @@ deviations, which take precedence over the loop file's own wording wherever they
 
 > Skip that skill's own Phase 0 step 4 (resolving `<review skill path>`) — it is a no-op here
 > since that file is being followed as text, not invoked as a skill. Use the `<review skill
-> path>` already resolved in this skill's own Phase 0 step 4 instead, everywhere the loop file
+> path>` already resolved in this skill's own Phase 0 step 5 instead, everywhere the loop file
 > says `<review skill path>`.
 >
 > In that skill's Phase 1, spawn the reviewer agent with `model: "opus"` explicitly — this
 > overrides that phase's "no `model` override — inherits the user's current model" instruction
-> and its restatement as an invariant in that skill's Notes; wherever the two conflict, this
+> and its restatement as an invariant in that skill's Roles section; wherever the two conflict, this
 > skill's `opus` override wins. In its Phase 0, use a round cap of **10** instead of the default
 > 5. Everything else — the fixer's `model: "sonnet"`, the per-round commit behavior, the
 > convergence/stopping rules, and the final summary — applies unchanged. As with every commit
@@ -161,7 +162,8 @@ Report:
 - The implementer's commit (SHA + one-line description) and any checks it ran.
 - The review loop's outcome: rounds run, per-round fix commits, and the **convergence
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
-  or stopped on non-convergence/oscillation with issues still outstanding at that point).
+  stopped with only trivial issues remaining, or stopped on non-convergence/oscillation with
+  issues still outstanding at that point).
 - The finalize commit, if one was made (SHA + what it fixed), or note that nothing was left to
   finalize.
 
