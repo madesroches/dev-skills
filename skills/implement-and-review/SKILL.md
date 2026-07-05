@@ -39,16 +39,23 @@ exists specifically to pair fast implementation with a stronger, independent rev
 
 1. Confirm `$ARGUMENTS` is provided and points to an existing file. Read it. If missing or
    not found, say so and stop — do not guess a plan.
-2. `git status --short` — the implementer commits its own changes, so the tree should be
+2. Check the current branch: `git branch --show-current`. If it is the base branch (`main`),
+   the implementer must not commit directly to it — create a feature branch first, before any
+   other Phase 0 step touches the tree, so the baseline commit (step 3) and every later commit
+   land on the new branch instead of `main`. Derive a short slug from the plan file's basename
+   (lowercase, hyphens in place of spaces/underscores, extension stripped) and run
+   `git checkout -b <slug>`. If the current branch is already something other than `main`, skip
+   this — implement directly on it.
+3. `git status --short` — the implementer commits its own changes, so the tree should be
    clean first. If there are uncommitted changes, show them to the user and commit them as a
    baseline so the implementation commit stays isolated. Stage by explicit path from the
    `git status --short` output — never `git add -A`. Run as two separate calls:
    `git add <file> [<file> ...]`, then `git commit -m "implement-and-review: baseline"`.
-3. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
+4. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
    `$CLAUDE_SKILL_DIR` here points at this skill's own directory, not that one):
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review-loop/SKILL.md"`
    Use this absolute path wherever Phase 2 below says `<loop skill path>`.
-4. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
+5. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
    skill's own Phase 0 — do not rely on `branch-review-loop`'s own Phase 0 step 4 to do this when
    its file is merely read and followed as text rather than invoked as a skill, its `!`-prefixed
    command does not execute, and `$CLAUDE_SKILL_DIR` cannot be trusted to still point at
@@ -56,11 +63,11 @@ exists specifically to pair fast implementation with a stronger, independent rev
    !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
    Use this absolute path as `<review skill path>` wherever the loop file (followed in Phase 2)
    says `<review skill path>` — do not let the loop file's own (inert) Phase 0 step 4 resolve it.
-5. Generate a unique scratch path for the implementer's commit message (a fixed name under
+6. Generate a unique scratch path for the implementer's commit message (a fixed name under
    `/tmp` would collide across concurrent invocations):
    !`mktemp -u /tmp/implement-and-review-impl-commit-msg.XXXXXX`
    Use this exact path as `<impl commit msg path>`.
-6. Generate a unique scratch path for the finalize commit message:
+7. Generate a unique scratch path for the finalize commit message:
    !`mktemp -u /tmp/implement-and-review-finalize-commit-msg.XXXXXX`
    Use this exact path as `<finalize commit msg path>`.
 
