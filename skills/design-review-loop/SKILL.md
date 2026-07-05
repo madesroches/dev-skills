@@ -137,6 +137,8 @@ actually fixed — not a generic round label. Build it from the fixer's reported
      summarize the theme rather than cramming each into the subject.
    - **Body**: one bullet per edit the fixer reported (its one-line descriptions), so the diff is
      self-documenting.
+   - **No AI attribution** — no `Co-Authored-By` lines and no agent credit, in this and every
+     other commit the loop makes (including the Phase 0 baseline).
 2. Write that message to `<commit msg path>` (from Phase 0) using the **Write** tool. Do **not**
    pass the message inline with `git commit -m`: a meaningful message contains quotes, backticks,
    and other shell metacharacters that the command-safety checker flags, which would stall this
