@@ -65,9 +65,12 @@ user already knows why and how to avoid it next time.
 ## Why direct `Skill` invocation (and not read-as-text)
 
 `implement-and-review` reads `branch-review-loop`'s file and follows it as *text* because it must
-deviate from it (override the reviewer's model to `opus`, raise the round cap). `ship-issue` needs
-**no deviation** from any of the four skills it chains — it wants each run verbatim. So it invokes
-each one through the `Skill` tool. Each invoked skill then executes its own preflight, its own
+deviate from it (override the reviewer's model to `opus`, raise the round cap) in ways that skill's
+own process doesn't expose as an argument. `ship-issue` needs **no such deviation** from any of the
+four skills it chains — it wants each run verbatim, following each skill's own supported inputs. So
+it invokes each one through the `Skill` tool, passing `design-review-loop` a higher round cap
+(Phase 2) the same way a user would — as an argument that skill's own Phase 0 already knows how to
+honor, not a change to its process. Each invoked skill then executes its own preflight, its own
 `!`-prefixed commands, and its own subagents natively, which the read-as-text pattern cannot do.
 Because nothing is restated, any change to a sub-skill's process is inherited automatically.
 
@@ -78,8 +81,8 @@ Because nothing is restated, any change to a sub-skill's process is inherited au
   design, review, implement, or open the PR itself.
 - **`design`** — invoked with the issue reference. Researches the codebase and writes the plan
   document. Produces no code.
-- **`design-review-loop`** — invoked with the plan path. Autonomously reviews and fixes the plan
-  until it converges, committing each round.
+- **`design-review-loop`** — invoked with the plan path and a round cap of 10 (double its own
+  default). Autonomously reviews and fixes the plan until it converges, committing each round.
 - **`implement-and-review`** — invoked with the plan path. Implements the plan (sonnet), commits,
   runs the `opus` `branch-review-loop`, then finalizes.
 - **`pr`** — invoked with no arguments. Runs lints/tests, moves the plan to `tasks/completed/`,
@@ -150,11 +153,14 @@ Because nothing is restated, any change to a sub-skill's process is inherited au
 
 ### Phase 2: Harden the plan
 
-Invoke the `design-review-loop` skill via the `Skill` tool, passing the **plan path** as its
-arguments. It runs autonomously, committing after each fix round, and terminates on its own
-(clean / only-trivial / round cap / non-convergence). Note its reported outcome for the final
-summary, then continue regardless — a non-clean stop leaves remaining issues that
-`implement-and-review`'s own review pass and the plan's reviewers can still surface.
+Invoke the `design-review-loop` skill via the `Skill` tool, passing the **plan path** followed by
+an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
+use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
+is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
+committing after each fix round, and terminates on its own (clean / only-trivial / round cap /
+non-convergence). Note its reported outcome for the final summary, then continue regardless — a
+non-clean stop leaves remaining issues that `implement-and-review`'s own review pass and the
+plan's reviewers can still surface.
 
 ### Phase 3: Implement and independently review
 
