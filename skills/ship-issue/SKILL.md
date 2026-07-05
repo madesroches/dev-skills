@@ -87,9 +87,9 @@ Because nothing is restated, any change to a sub-skill's process is inherited au
    to review.
 3. **Record the issue link in the plan** so the downstream `pr` skill can auto-link it. Read the
    plan file. If it does not already contain a `**GitHub Issue**:` line near the top, insert one
-   immediately after the `# <Title> Plan` heading (as line 3), using the issue **url** from
-   Phase 0, e.g. `**GitHub Issue**: https://github.com/owner/repo/issues/142`. If such a line is
-   already present, leave it.
+   in the plan's header — on its own line just below the `# <Title> Plan` heading — using the
+   issue **url** from Phase 0, e.g. `**GitHub Issue**: https://github.com/owner/repo/issues/142`.
+   If such a line is already present, leave it.
 4. Commit the plan file:
    - Compose a commit message — subject: `Add design plan for #<number>: <title>` (truncate to
      ≤ 72 chars); body optional. Write it to `<plan commit msg path>` with the **Write** tool.
