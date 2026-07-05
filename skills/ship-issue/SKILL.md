@@ -43,6 +43,25 @@ it. In particular:
   pause with `AskUserQuestion`. A routine open question or a plan the user might merely *prefer* to
   tweak does not qualify.
 
+## Autonomous push — remind the user up front
+
+The final phase (`pr`) pushes the branch, which is what lets CI run on the resulting PR. That push
+can be gated by the permission layer: some repos' `CLAUDE.md` require a **direct, unambiguous
+instruction to push**, and an autonomous chain on its own does not satisfy that — so the push (and
+therefore CI) can stall even though every earlier stage succeeded. The skill cannot override that
+gate, but the user can pre-authorize it simply by giving an explicit push instruction, which then
+sits in context when `pr` reaches the push.
+
+So **at the very start of the run** (Phase 0), check whether the user's invocation already carries
+an explicit push instruction (e.g. "and push", "push and open the PR"). If it does, the chain is
+fully autonomous through the PR — say nothing about it. If it does **not**, emit a one-line reminder
+before proceeding: that the chain will run straight through, but the final push may be gated unless
+they've explicitly asked for it, and that re-invoking with an explicit push instruction (e.g.
+`/ship-issue <issue> — push and open the PR when done`) makes the whole run, push included,
+autonomous. Then **continue the chain anyway without pausing** — do not wait for a reply. If the
+push does end up gated at Phase 4, `pr` stops there with the branch and all commits intact, and the
+user already knows why and how to avoid it next time.
+
 ## Why direct `Skill` invocation (and not read-as-text)
 
 `implement-and-review` reads `branch-review-loop`'s file and follows it as *text* because it must
@@ -72,6 +91,8 @@ Because nothing is restated, any change to a sub-skill's process is inherited au
 
 1. Confirm `$ARGUMENTS` is provided and looks like a GitHub issue reference (a full issue URL or
    an issue number). If missing, say so and stop — do not invent an issue.
+   Then apply the **Autonomous push** check above: if the invocation carries no explicit push
+   instruction, emit the one-line reminder now, before proceeding — and continue without pausing.
 2. Confirm the issue exists and capture its metadata:
    `gh issue view <issue> --json number,title,url`. If the command fails (bad number, wrong repo,
    not authenticated), report the error and stop. Keep the issue's **number**, **title**, and
