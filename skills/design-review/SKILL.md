@@ -38,6 +38,10 @@ Scan the plan for potential problems:
 - **Missing error handling** at system boundaries
 - **Test strategy gaps** — untestable designs, missing edge cases, no integration coverage
 - **Performance concerns** — N+1 queries, unnecessary re-renders, unbounded data structures
+- **New dependencies** — every third-party package, library, or tool the plan proposes adding. Treat
+  each as a candidate to scrutinize on two axes: **value** (does it earn its place, or could existing
+  dependencies or a small amount of first-party code do the job?) and **version** (does the plan pin
+  the latest stable release, or a stale/outdated one?)
 - **Documentation gaps** — public APIs, config options, or architectural decisions introduced by the plan that lack corresponding docs; existing docs (READMEs, guides) that reference affected areas and would become stale
 
 For each candidate, write a one-line summary and note which plan section is involved.
@@ -62,6 +66,12 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Is the "over-engineering" concern valid, or does the complexity serve a real need evident in the codebase?
    - Are there existing patterns or utilities the plan overlooks that would simplify or invalidate a step?
    - For documentation candidates: does a relevant doc file exist? Does it cover the area being changed? Would it become inaccurate if the plan were implemented as written?
+   - For new-dependency candidates: confirm the package is actually new (not already a
+     direct or transitive dependency). Weigh whether it brings enough value to justify the added
+     surface area, or whether an existing dependency or modest first-party code would suffice. Look
+     up the latest stable version from the authoritative source (e.g. `npm view <pkg> version`,
+     `pip index versions <pkg>`, `cargo search`, or the package registry via WebFetch) and compare it
+     to the version the plan proposes — flag if it's outdated or unpinned.
    - For open-question candidates: search the codebase for the answer — an existing pattern, interface, type, or precedent that determines it. Return a **concrete resolution** when the code settles it. Only when the question is a genuine product/policy decision the code cannot answer (e.g. a UX choice, a business rule) should it be left for the user — say so explicitly.
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation. For open-question candidates the verdict is instead **resolved** (with the concrete answer the code supports) or **needs user decision** (with why the codebase can't settle it).
 
