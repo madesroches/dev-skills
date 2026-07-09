@@ -33,6 +33,7 @@ Scan the diff for potential problems:
 - Performance implications (N+1 queries, repeated work in hot paths, unbounded growth — e.g. unnecessary re-renders in UI code)
 - Test coverage gaps (new code without tests, existing tests invalidated by changes)
 - Project convention violations (naming, patterns, style inconsistent with surrounding code)
+- Suppressed lints introduced by the diff (Rust `#[allow(clippy::...)]` / `#[expect(clippy::...)]`, and equivalent suppressions in other linters) — treat each as a candidate: the underlying lint may be flagging a real concern that should be fixed rather than silenced
 
 For each candidate, write a one-line summary and note which files/lines are involved.
 
@@ -53,6 +54,7 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Does the type system, framework, or UI prevent the scenario? Check type constraints, validated inputs, and (in UI code) component props and select options.
    - Is there existing handling elsewhere that covers this case?
    - Is the "missing" code actually unnecessary given the guarantees of the framework or surrounding code?
+   - For a suppressed lint (e.g. `#[allow(clippy::...)]` / `#[expect(clippy::...)]`): what exactly does that lint flag, and does it point to a real concern in this code? Confirm it only if the suppression hides a genuine problem that should be fixed instead — read the annotated code and judge whether the fix is warranted. Dismiss it as a false positive when the suppression is justified (intentional, idiomatic, or the lint is a genuine false positive here), especially if a nearby comment explains why.
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation
 
 Launch all agents in a single message so they run concurrently. Collect all results before proceeding.
