@@ -34,9 +34,11 @@ bookkeeping; the reviewer never sees it.
   findings to detect non-convergence, commits after each fix, and writes the final summary. It
   does **not** review or edit code itself.
 - **Reviewer agent** — a fresh `Task` agent (`subagent_type: "general-purpose"`) spawned each
-  round. Runs `branch-review` Phases 1–4 only and returns a structured issue list. Uses whatever
-  model the user currently has set — no override — since review quality should track the user's
-  own model choice, not a fixed tier.
+  round. Runs `branch-review` Phases 1–4 only and returns a structured issue list. By default uses
+  whatever model the user currently has set — no override — since review quality should track the
+  user's own model choice, not a fixed tier. A caller can explicitly request a different model for
+  the reviewer (see Phase 0); this is the mechanism `implement-and-review` and `ship-issue` use to
+  get an `opus` reviewer without restating this skill's process.
 - **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`) spawned
   each round that has substantive issues. Edits the code to resolve them and reports what it
   changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
@@ -87,11 +89,16 @@ bookkeeping; the reviewer never sees it.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
+Set no reviewer model override by default — the reviewer inherits the session's current model.
+If the invocation explicitly requests a different model for the reviewer (e.g. "use opus for the
+reviewer"), use that model instead everywhere Phase 1 spawns the reviewer agent.
+
 ### Phase 1: Review (fresh agent)
 
-Increment `N`. Spawn a **new** reviewer agent (no `model` override — inherits the user's
-current model). Its prompt must contain **only** the base branch and the instructions below —
-never the findings or context from previous rounds.
+Increment `N`. Spawn a **new** reviewer agent, using the reviewer model resolved in Phase 0 (no
+override by default, so it inherits the user's current model; an explicitly requested override
+otherwise). Its prompt must contain **only** the base branch and the instructions below — never
+the findings or context from previous rounds.
 
 > Run the `branch-review` skill's process (Phases 1–4) on the current branch against base `<base>`.
 > Read the review process from the file at `<review skill path>` and follow it exactly for Phases

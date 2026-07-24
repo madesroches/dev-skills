@@ -64,15 +64,16 @@ user already knows why and how to avoid it next time.
 
 ## Why direct `Skill` invocation (and not read-as-text)
 
-`implement-and-review` reads `branch-review-loop`'s file and follows it as *text* because it must
-deviate from it (override the reviewer's model to `opus`, raise the round cap) in ways that skill's
-own process doesn't expose as an argument. `ship-issue` needs **no such deviation** from any of the
-four skills it chains — it wants each run verbatim, following each skill's own supported inputs. So
-it invokes each one through the `Skill` tool, passing `design-review-loop` a higher round cap
-(Phase 2) the same way a user would — as an argument that skill's own Phase 0 already knows how to
+`ship-issue` needs **no deviation** from any of the four skills it chains — it wants each run
+verbatim, following each skill's own supported inputs. So it invokes each one through the `Skill`
+tool, passing `design-review-loop` a higher round cap (Phase 2) and `implement-and-review` the
+plan path, the same way a user would — arguments each skill's own Phase 0 already knows how to
 honor, not a change to its process. Each invoked skill then executes its own preflight, its own
-`!`-prefixed commands, and its own subagents natively, which the read-as-text pattern cannot do.
-Because nothing is restated, any change to a sub-skill's process is inherited automatically.
+`!`-prefixed commands, and its own subagents natively. Because nothing is restated, any change to
+a sub-skill's process is inherited automatically. `implement-and-review` itself follows the same
+principle one layer down: it delegates its review loop to `branch-review-loop` via the `Skill`
+tool (passing an `opus` reviewer override and a round cap of 10), rather than restating that
+loop's process — so this chain never restates any skill's logic at any level.
 
 ## Roles
 
@@ -209,4 +210,5 @@ Report the whole chain concisely:
   already enforce the same for every commit they make.
 - **No restated logic.** Every stage is a direct `Skill` invocation with no per-skill deviation,
   so a change to any of `design`, `design-review-loop`, `implement-and-review`, or `pr` is
-  inherited here automatically.
+  inherited here automatically. `implement-and-review` carries this same principle one layer
+  further down for its own review loop — see **Why direct `Skill` invocation** above.

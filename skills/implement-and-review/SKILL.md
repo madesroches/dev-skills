@@ -2,7 +2,7 @@
 name: implement-and-review
 description: Implement a design plan, commit it, then iteratively review and fix the branch with a stronger model until it converges
 argument-hint: "<path to plan file>"
-allowed-tools: Read, Write, Bash(git *), Bash(dirname *), Bash(mktemp *), Bash(echo *), Task, AskUserQuestion
+allowed-tools: Read, Write, Bash(git *), Bash(mktemp *), Task, AskUserQuestion, Skill
 ---
 
 # Implement and Review — Build a Plan, Then Harden It
@@ -15,17 +15,15 @@ skill exists specifically to pair fast implementation with a stronger, independe
 ## Roles
 
 - **Orchestrator** — this skill, running in the main context. Sequences implementation then
-  review, resolves paths, and writes the final summary. Does not write application code or
-  review it itself.
+  review and writes the final summary. Does not write application code or review it itself.
 - **Implementer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
   spawned once. Reads the plan, implements every step, and commits the result. `sonnet` is
   sufficient for well-specified implementation work coming from a plan document.
-- **Review loop** — carried out by the orchestrator itself (not delegated to a subagent),
-  following the `branch-review-loop` skill's process verbatim from its file on disk, so this
-  skill automatically inherits any change to that loop's logic. Three deviations: its Phase 1
-  reviewer agent is spawned with `model: "opus"` instead of no override, its round cap
-  defaults to 10 instead of 5, and its own Phase 0 step 4 (resolving `<review skill path>`) is
-  skipped in favor of the path already resolved in this skill's own Phase 0.
+- **Review loop** — delegated directly to the `branch-review-loop` skill via the `Skill` tool,
+  passing the base branch, a round cap of 10, and a request to use `opus` for the reviewer —
+  parameters that skill's own Phase 0 already supports, so this is not a deviation from its
+  process, just arguments it's designed to take. This skill automatically inherits any change to
+  that loop's logic since nothing is restated.
 - **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
   spawned once after the review loop ends, only if it left anything unresolved (the trivial
   issues it never fixes by design, plus any substantive issues still open because the loop hit
@@ -61,23 +59,11 @@ skill exists specifically to pair fast implementation with a stronger, independe
    by explicit path from the `git status --short` output — tracked and untracked alike — never
    `git add -A`, so nothing sweeps in silently. Run as two separate calls:
    `git add <file> [<file> ...]`, then `git commit -m "implement-and-review: baseline"`.
-6. Resolve the absolute path to the companion `branch-review-loop` skill (needed for Phase 2 —
-   `$CLAUDE_SKILL_DIR` here points at this skill's own directory, not that one):
-   !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review-loop/SKILL.md"`
-   Use this absolute path wherever Phase 2 below says `<loop skill path>`.
-7. Also resolve the absolute path to the companion `branch-review` skill directly, here in this
-   skill's own Phase 0 — do not rely on `branch-review-loop`'s own Phase 0 step 4 to do this when
-   its file is merely read and followed as text rather than invoked as a skill — its `!`-prefixed
-   command does not execute, and `$CLAUDE_SKILL_DIR` cannot be trusted to still point at
-   `branch-review-loop`'s directory at that point:
-   !`echo "$(dirname "$CLAUDE_SKILL_DIR")/branch-review/SKILL.md"`
-   Use this absolute path as `<review skill path>` wherever the loop file (followed in Phase 2)
-   says `<review skill path>` — do not let the loop file's own (inert) Phase 0 step 4 resolve it.
-8. Generate a unique scratch path for the implementer's commit message (a fixed name under
+6. Generate a unique scratch path for the implementer's commit message (a fixed name under
    `/tmp` would collide across concurrent invocations):
    !`mktemp -u /tmp/implement-and-review-impl-commit-msg.XXXXXX`
    Use this exact path as `<impl commit msg path>`.
-9. Generate a unique scratch path for the finalize commit message:
+7. Generate a unique scratch path for the finalize commit message:
    !`mktemp -u /tmp/implement-and-review-finalize-commit-msg.XXXXXX`
    Use this exact path as `<finalize commit msg path>`.
 
@@ -111,33 +97,19 @@ couldn't resolve), stop here and report the blocker to the user instead of proce
 
 ### Phase 2: Review loop (opus)
 
-Confirm the implementer's commit landed (`git log --oneline -1`). Then carry out the
-`branch-review-loop` process yourself, in this same context, exactly as written in the file at
-`<loop skill path>` — its Phases 0 through 5, targeting base branch `<base>` (resolved in
-this skill's Phase 0 step 2) — with these
-deviations, which take precedence over the loop file's own wording wherever they conflict with it:
+Confirm the implementer's commit landed (`git log --oneline -1`). Then invoke the
+`branch-review-loop` skill via the `Skill` tool, passing: the base branch `<base>` (resolved in
+this skill's Phase 0), an instruction to use a round cap of 10, and an instruction to use `opus`
+for the reviewer (e.g. `<base> — use opus for the reviewer and a round cap of 10`). It runs its
+own Phase 0 through Phase 5 autonomously — including its own baseline-commit check, which will
+find nothing to do since the tree is already clean after Phase 1's commit — committing after each
+fix round and terminating on its own (clean / only trivial / round cap / non-convergence /
+oscillation).
 
-> Skip that skill's own Phase 0 step 4 (resolving `<review skill path>`) — it is a no-op here
-> since that file is being followed as text, not invoked as a skill. Use the `<review skill
-> path>` already resolved in this skill's own Phase 0 step 7 instead, everywhere the loop file
-> says `<review skill path>`.
->
-> In that skill's Phase 1, spawn the reviewer agent with `model: "opus"` explicitly — this
-> overrides that phase's "no `model` override — inherits the user's current model" instruction
-> and its restatement as an invariant in that skill's Roles section; wherever the two conflict, this
-> skill's `opus` override wins. In its Phase 0, use a round cap of **10** instead of the default
-> 5. Everything else — the fixer's `model: "sonnet"`, the per-round commit behavior, the
-> convergence/stopping rules, and the final summary — applies unchanged. As with every commit
-> this skill makes or causes to be made, round commits must carry no AI attribution.
-
-Since the tree is already clean after Phase 1's commit, that skill's own baseline-commit step
-in its Phase 0 will find nothing to do.
-
-Record which stopping condition ended the loop (clean / only trivial / round cap /
-non-convergence / oscillation) — Phase 4 reports this as the convergence status. Treat "clean"
-as **converged**; every other stopping condition (including "only trivial", since that means
-substantive issues were resolved but something is still left over) as **hit the round cap /
-did not fully converge** — be precise about which one it actually was.
+Record which stopping condition ended the loop — Phase 4 reports this as the convergence status.
+Treat "clean" as **converged**; every other stopping condition (including "only trivial", since
+that means substantive issues were resolved but something is still left over) as **hit the round
+cap / did not fully converge** — be precise about which one it actually was.
 
 ### Phase 3: Finalize — fix whatever the loop left behind
 
@@ -183,7 +155,7 @@ Report:
   work, and the reviewer never sees the plan, only the resulting diff. This mirrors why
   `branch-review-loop` always starts its reviewer from a blank context.
 - This skill builds directly on `branch-review-loop`; if that skill's process changes, this
-  skill inherits the change because Phase 2 above follows it at its resolved absolute path
+  skill inherits the change because Phase 2 above invokes it directly via the `Skill` tool
   rather than restating its logic.
 - The finalize pass is deliberately unreviewed — it exists to guarantee the branch this skill
   hands back has no known open issues, not to re-run the loop. If it introduces a new problem,
