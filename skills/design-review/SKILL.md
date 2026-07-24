@@ -71,7 +71,10 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
      surface area, or whether an existing dependency or modest first-party code would suffice. Look
      up the latest stable version from the authoritative source (e.g. `npm view <pkg> version`,
      `pip index versions <pkg>`, `cargo search`, or the package registry via WebFetch) and compare it
-     to the version the plan proposes — flag if it's outdated or unpinned.
+     to the version the plan proposes — flag if it's outdated or unpinned. These lookups are
+     **best-effort**: if the command is unavailable or blocked by the permission layer, do not
+     stall waiting on it — return the verdict with the version marked *unverified* instead, so
+     an autonomous caller (e.g. a review loop) is never blocked on a network lookup.
    - For open-question candidates: search the codebase for the answer — an existing pattern, interface, type, or precedent that determines it. Return a **concrete resolution** when the code settles it. Only when the question is a genuine product/policy decision the code cannot answer (e.g. a UX choice, a business rule) should it be left for the user — say so explicitly.
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation. For open-question candidates the verdict is instead **resolved** (with the concrete answer the code supports) or **needs user decision** (with why the codebase can't settle it).
 
@@ -79,23 +82,39 @@ Launch all agents in a single message so they run concurrently. Collect all resu
 
 ### Phase 4: Report
 
-Output a concise list of **confirmed issues only**. For each:
-- One-line summary
-- Plan section reference
-- Why it's a real problem (what you verified against the code)
-- Suggested fix (one sentence)
+Classify each confirmed issue by severity:
 
-For **resolved open questions**, report each as a confirmed issue whose suggested fix is: fold the
-concrete answer into the relevant plan section and remove the item from `## Open Questions`. An open
-question that the code answers is a real, fixable gap — surface it so it gets closed, not left
-lingering. For a question that genuinely **needs a user decision**, report it separately as such
-(with why the codebase can't settle it) so it stays in `## Open Questions` for the user rather than
-being treated as a fixable issue.
+- **substantive** — a real design flaw, ambiguity, or correctness/ordering/breakage problem that
+  should be fixed
+- **trivial** — wording, formatting, optional polish, or nitpick
+
+Output a concise list of **confirmed issues only**. For each, report:
+
+- `severity`: substantive or trivial
+- `summary`: one line
+- `section`: which plan section is involved
+- `why`: what you verified against the code that makes it a real problem
+- `fix`: the suggested fix in one sentence
+
+For **resolved open questions**, report each as a confirmed **substantive** issue whose `fix` is:
+fold the concrete answer into the relevant plan section and remove the item from
+`## Open Questions`. An open question that the code answers is a real, fixable gap — surface it so
+it gets closed, not left lingering. For a question that genuinely **needs a user decision**, report
+it in its own category labeled `needs user decision` (with `section` and why the codebase can't
+settle it) — it carries no severity, is never a fixable issue, and stays in `## Open Questions`
+for the user.
 
 At the end, note how many candidates were dismissed as false positives (no need to list them individually unless the user asks).
 
+This structured format is the skill's output contract: callers that run Phases 1–4
+programmatically (e.g. `design-review-loop`) consume these fields and the `needs user decision`
+category as-is — keep the field names and severity definitions stable.
+
 ### Phase 5: Act on results
 
-If there are confirmed issues, ask the user whether they want the fixes applied.
+If there are confirmed issues, first output the full Phase 4 report so the user sees every
+confirmed issue — severity, summary, section, why, and suggested fix, plus any `needs user
+decision` questions — and only then ask whether they want the fixes applied. Never ask before the
+report is on screen, and never bury the issue list inside the question itself.
 
 If yes, apply fixes directly in the plan file for all confirmed issues. For each fix, explain what you're changing and why before editing.

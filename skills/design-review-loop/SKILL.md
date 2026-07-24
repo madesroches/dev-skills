@@ -33,9 +33,11 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
   per-round findings to detect non-convergence, commits after each fix, and writes the
   final summary. It does **not** review or edit the plan itself.
 - **Reviewer agent** — a fresh `Task` agent (`subagent_type: "general-purpose"`) spawned each
-  round. Runs `design-review` Phases 1–4 only and returns a structured issue list. Uses whatever
-  model the user currently has set — no override — since review quality should track the user's
-  own model choice, not a fixed tier.
+  round. Runs `design-review` Phases 1–4 only and returns a structured issue list. By default uses
+  whatever model the user currently has set — no override — since review quality should track the
+  user's own model choice, not a fixed tier. A caller can explicitly request a different model for
+  the reviewer (see Phase 0) — the same mechanism `branch-review-loop` offers — so a composite
+  skill can get a stronger plan reviewer without restating this skill's process.
 - **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`) spawned
   each round that has substantive issues. Edits the plan file to resolve them and reports what it
   changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
@@ -76,10 +78,15 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
+Set no reviewer model override by default — the reviewer inherits the session's current model.
+If the invocation explicitly requests a different model for the reviewer (e.g. "use opus for the
+reviewer"), use that model instead everywhere Phase 1 spawns the reviewer agent.
+
 ### Phase 1: Review (fresh agent)
 
-Increment `N`. Spawn a **new** reviewer agent (no `model` override — inherits the user's
-current model). Its prompt must contain **only** the plan path and the instructions below —
+Increment `N`. Spawn a **new** reviewer agent, using the reviewer model resolved in Phase 0 (no
+override by default, so it inherits the user's current model; an explicitly requested override
+otherwise). Its prompt must contain **only** the plan path and the instructions below —
 never the findings or context from previous rounds.
 
 > Run the `design-review` skill's process (Phases 1–4) on the plan file at `<plan path>`.
@@ -89,34 +96,28 @@ never the findings or context from previous rounds.
 >
 > **Do not run Phase 5** — do not ask the user anything and do not edit the plan.
 >
-> Return confirmed issues only, as a list. For each confirmed issue provide:
-> - `severity`: `substantive` (a real design flaw, ambiguity, or correctness/ordering/breakage problem
->   that should be fixed) or `trivial` (wording, formatting, optional polish, or nitpick)
-> - `summary`: one line
-> - `section`: which plan section is involved
-> - `why`: what you verified against the code that makes it a real problem
-> - `fix`: the suggested fix in one sentence
+> Return confirmed issues only, as a list, exactly in the structured format that skill's Phase 4
+> defines — `severity`, `summary`, `section`, `why`, `fix` for each, with severity classified by
+> that phase's definitions. Also return any open questions its Phase 4 puts in the
+> `needs user decision` category, labeled as such — they must be reported so the loop can surface
+> them, but they are never fixed and never counted as a design flaw.
 >
-> Open questions in the plan are part of this review (see `design-review` Phase 2). A **resolved**
-> open question — one the codebase answers — is `substantive`: its `fix` is to fold the concrete
-> answer into the relevant section and clear it from `## Open Questions`. An open question that
-> genuinely **needs a user decision** (the code cannot settle it) is `trivial`, with `section`
-> set to `Open Questions` and `why` explaining why only the user can decide — it must be reported
-> so the loop can surface it, but never fixed and never counted as a design flaw.
->
-> If there are no confirmed issues, return exactly `NO ISSUES`.
+> If there are no confirmed issues and no `needs user decision` questions, return exactly `NO ISSUES`.
 
 Collect the reviewer's structured result.
 
 ### Phase 2: Decide whether to continue
 
-Partition the confirmed issues into `substantive` and `trivial`.
+Partition the confirmed issues into `substantive` and `trivial`. Set aside any
+`needs user decision` open questions — they are surfaced in the final summary, never fixed, and
+never counted as substantive.
 
 Stop the loop and go to **Phase 5** if any of these hold:
 
 - **Clean:** there are no confirmed issues (`NO ISSUES`).
-- **Only trivial remain:** there are zero substantive issues. Trivial issues are reported,
-  not fixed — fixing them round after round invites churn and they are not worth a loop.
+- **Nothing fixable remains:** there are zero substantive issues (only trivial issues and/or
+  `needs user decision` questions). Trivial issues are reported, not fixed — fixing them round
+  after round invites churn and they are not worth a loop.
 - **Round cap:** `N` has reached the cap (default 5).
 - **Non-convergence:** the set of substantive issues this round is essentially the same as a
   previous round's (compare against `history` by summary/section). This means the fixer failed
@@ -175,13 +176,14 @@ prompt.
 
 When the loop ends, output a concise report:
 
-- **Outcome** — which stopping condition fired (clean / only trivial / round cap / non-convergence / oscillation).
+- **Outcome** — which stopping condition fired (clean / nothing fixable / round cap / non-convergence / oscillation).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Remaining issues** — any trivial issues from the last review, and (if the loop stopped on cap
   or non-convergence) the unresolved substantive issues, so the user can decide what to do next.
-- **Open questions left for the user** — any open questions the reviewer marked as needing a user
-  decision (still in `## Open Questions`). Call these out explicitly rather than burying them among
-  trivial issues — they are the one thing the autonomous loop deliberately does not resolve.
+- **Open questions left for the user** — any open questions the reviewer returned in the
+  `needs user decision` category (still in `## Open Questions`). Call these out explicitly rather
+  than burying them among trivial issues — they are the one thing the autonomous loop deliberately
+  does not resolve.
 - **Commits** — the per-round fix commits created (short SHA + subject line), so the user can
   review or revert the diff.
 
@@ -196,4 +198,9 @@ with substantive issues outstanding, say so plainly and hand control back — do
   context from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
 - This skill builds directly on `design-review`; if that skill's process changes, this loop inherits
   the change because the reviewer agent is told to follow the `design-review` SKILL.md at its
-  resolved absolute path (`<review skill path>`).
+  resolved absolute path (`<review skill path>`). The issue fields, severity definitions, and the
+  `needs user decision` category come from `design-review` Phase 4's output contract, not from
+  this skill.
+- `design-review-loop` and `branch-review-loop` are deliberate near-mirrors. When changing shared
+  loop mechanics here (preflight, stop conditions, commit protocol, reviewer/fixer roles, model
+  overrides), make the same change in the sibling skill — history shows they drift otherwise.

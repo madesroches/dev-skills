@@ -23,19 +23,32 @@ These skills establish a lightweight workflow convention:
 - **`tasks/completed/`** — plans that have been implemented
 - **`CHANGELOG.md`** — the `/pr` skill updates the unreleased section
 
+## How the skills compose
+
+The review skills follow a **candidate → parallel verification → report** pattern: identify
+potential issues, verify each against real code with parallel Explore agents, and report only
+confirmed ones, classified by severity. The loop skills (`/design-review-loop`,
+`/branch-review-loop`) wrap a review skill in an autonomous review → fix → commit cycle with a
+fresh reviewer each round. The composite skills chain the others via direct `Skill` invocations:
+`/implement-and-review` = implement + `branch-review-loop` (opus reviewer) + finalize, and
+`/ship-issue` = `design` → `design-review-loop` → `implement-and-review` → `pr`. Nothing is
+restated, so a change to any skill is inherited by everything built on it.
+
 ## Installation
 
-Add the plugin to your Claude Code settings (`~/.claude/settings.json`):
+This repo is its own plugin marketplace. In Claude Code:
 
-```json
-{
-  "plugins": [
-    "/path/to/dev-skills"
-  ]
-}
+```
+/plugin marketplace add madesroches/dev-skills
+/plugin install dev-skills@dev-skills
 ```
 
-Or if published to a marketplace, install via the Claude Code plugin manager.
+For a local checkout, use the path instead:
+
+```
+/plugin marketplace add /path/to/dev-skills
+/plugin install dev-skills@dev-skills
+```
 
 ## How `/pr` discovers checks
 

@@ -68,9 +68,13 @@ Update `CHANGELOG.md` with the changes from this branch.
 
 ### Phase 5: Create the Pull Request
 
-1. Check if the branch has been pushed to the remote:
-   - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check tracking
-   - If not pushed or behind, push with `git push -u origin <branch>`
+1. Make sure the remote has the branch's commits:
+   - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check whether an upstream is set
+   - If there is no upstream, push with `git push -u origin <branch>`
+   - If an upstream exists, compare with `git rev-list --left-right --count @{u}...HEAD`:
+     if the local branch is strictly ahead, push with `git push`; if it is behind or has
+     diverged (the remote has commits the local branch lacks), **stop and report** — never
+     force-push, and never pull/rebase automatically; let the user reconcile and re-run
 
 2. Build the PR description:
    - Title: concise summary of the changes (under 70 characters)

@@ -2,8 +2,37 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
-## Unreleased
+## [1.14.0] - 2026-07-23
 
+- Parameterize `design-review-loop`'s reviewer model the same way `branch-review-loop` already is, so callers can request a stronger model for plan review
+- Move severity classification and the structured issue format (severity/summary/location/why/fix) into `branch-review` and `design-review` Phase 4; the loop skills now consume that contract instead of restating it
+- `design-review` reports open questions needing a user decision as their own category instead of shoehorning them into `trivial`
+- Add documentation-gap candidate to `branch-review`, matching `design-review`
+- `ship-issue` verifies an existing feature branch actually references the issue before piling commits onto it, asking otherwise
+- Make `design-review`'s dependency-version lookups best-effort so a blocked network command can't stall an autonomous loop
+- `/pr` handles a diverged/behind branch explicitly at push time: stop and report, never force-push
+- Add `scripts/validate.py` and a GitHub Actions workflow checking frontmatter, version↔changelog sync, manifest description sync, README coverage, and tool declarations
+- Note in both loop skills that they are deliberate mirrors and shared-mechanics changes must be applied to both
+- Update README installation instructions to the current plugin marketplace flow
+- Backfill changelog entries for 1.10.0–1.13.0
+
+## [1.13.0] - 2026-07-23
+
+- Parameterize `branch-review-loop`'s reviewer model (optional override, same mechanism as the round cap)
+- `implement-and-review` invokes `branch-review-loop` directly via the `Skill` tool (opus reviewer, round cap 10) instead of reading its file as text with deviations
+
+## [1.12.0] - 2026-07-23
+
+- Warn in loop-skill preflight when `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` < 2, since the reviewer's parallel verification needs nested subagent spawning
+
+## [1.11.0] - 2026-07-09
+
+- `branch-review` treats lint suppressions introduced by the diff (`#[allow(clippy::...)]` etc.) as candidates and verifies whether each hides a real concern
+
+## [1.10.0] - 2026-07-06
+
+- `design-review` scrutinizes new dependencies on two axes: value earned and whether the latest stable version is pinned
+- Raise `design-review-loop` round cap to 10 in `ship-issue`
 - `ship-issue` reminds the user up front to give an explicit push instruction when the invocation lacks one, so the final push (and CI) isn't gated by the permission layer
 
 ## [1.9.0] - 2026-07-04

@@ -116,7 +116,13 @@ loop's process — so this chain never restates any skill's logic at any level.
    the title lowercased, non-alphanumeric runs collapsed to single hyphens, leading/trailing
    hyphens trimmed, and truncated to a reasonable length (e.g. `142-add-zoom-buttons`). Run
    `git checkout -b <slug>`. If the current branch is already something other than `<base>` and not
-   detached, skip this — work on it directly.
+   detached, check that it plausibly belongs to this issue: does the branch name contain the
+   issue number? If it does, skip branch creation and work on it directly. If it does not, ask
+   with AskUserQuestion (this is preflight — the no-pausing rule applies only once the chain is
+   running) whether to (a) continue on the current branch anyway, (b) create the issue's feature
+   branch off `<base>` (`git checkout -b <slug> <base>`) and work there, or (c) stop — otherwise
+   the whole chain (plan, review rounds, implementation, PR) could silently pile onto a branch
+   made for unrelated work.
 6. If step 4 called for a baseline commit, make it now, on top of the branch from step 5: stage by
    explicit path from the `git status --short` output — tracked and untracked alike — never
    `git add -A`. Run as two separate calls: `git add <file> [<file> ...]`, then
@@ -158,7 +164,7 @@ Invoke the `design-review-loop` skill via the `Skill` tool, passing the **plan p
 an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
 use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
 is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
-committing after each fix round, and terminates on its own (clean / only-trivial / round cap /
+committing after each fix round, and terminates on its own (clean / nothing fixable / round cap /
 non-convergence). Note its reported outcome for the final summary, then continue regardless — a
 non-clean stop leaves remaining issues that `implement-and-review`'s own review pass and the
 plan's reviewers can still surface.

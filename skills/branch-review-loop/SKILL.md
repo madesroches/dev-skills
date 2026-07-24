@@ -107,13 +107,9 @@ the findings or context from previous rounds.
 >
 > **Do not run Phase 5** — do not ask the user anything and do not edit any code.
 >
-> Return confirmed issues only, as a list. For each confirmed issue provide:
-> - `severity`: `substantive` (a real bug, logic/race/security/type error, breakage, or missing
->   handling that should be fixed) or `trivial` (style, naming, formatting, optional polish, or nitpick)
-> - `summary`: one line
-> - `location`: file and line reference
-> - `why`: what you verified that makes it a real problem
-> - `fix`: the suggested fix in one sentence
+> Return confirmed issues only, as a list, exactly in the structured format that skill's Phase 4
+> defines — `severity`, `summary`, `location`, `why`, `fix` for each, with severity classified by
+> that phase's definitions.
 >
 > If there are no confirmed issues, return exactly `NO ISSUES`.
 
@@ -205,4 +201,8 @@ substantive issues outstanding, say so plainly and hand control back — do not 
   from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
 - This skill builds directly on `branch-review`; if that skill's process changes, this loop inherits
   the change because the reviewer agent is told to follow the `branch-review` SKILL.md at its
-  resolved absolute path (`<review skill path>`).
+  resolved absolute path (`<review skill path>`). The issue fields and severity definitions come
+  from `branch-review` Phase 4's output contract, not from this skill.
+- `branch-review-loop` and `design-review-loop` are deliberate near-mirrors. When changing shared
+  loop mechanics here (preflight, stop conditions, commit protocol, reviewer/fixer roles, model
+  overrides), make the same change in the sibling skill — history shows they drift otherwise.

@@ -33,6 +33,9 @@ Scan the diff for potential problems:
 - Performance implications (N+1 queries, repeated work in hot paths, unbounded growth — e.g. unnecessary re-renders in UI code)
 - Test coverage gaps (new code without tests, existing tests invalidated by changes)
 - Project convention violations (naming, patterns, style inconsistent with surrounding code)
+- Documentation gaps — public APIs, config options, CLI flags, or behavior changed by the diff
+  that existing docs (READMEs, guides) still describe the old way, or new user-facing surface
+  with no docs at all
 - Suppressed lints introduced by the diff (Rust `#[allow(clippy::...)]` / `#[expect(clippy::...)]`, and equivalent suppressions in other linters) — treat each as a candidate: the underlying lint may be flagging a real concern that should be fixed rather than silenced
 
 For each candidate, write a one-line summary and note which files/lines are involved.
@@ -54,6 +57,9 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Does the type system, framework, or UI prevent the scenario? Check type constraints, validated inputs, and (in UI code) component props and select options.
    - Is there existing handling elsewhere that covers this case?
    - Is the "missing" code actually unnecessary given the guarantees of the framework or surrounding code?
+   - For a documentation candidate: does a relevant doc file exist, does it cover the changed
+     area, and does the diff actually make it inaccurate (or introduce user-facing surface it
+     should cover)?
    - For a suppressed lint (e.g. `#[allow(clippy::...)]` / `#[expect(clippy::...)]`): what exactly does that lint flag, and does it point to a real concern in this code? Confirm it only if the suppression hides a genuine problem that should be fixed instead — read the annotated code and judge whether the fix is warranted. Dismiss it as a false positive when the suppression is justified (intentional, idiomatic, or the lint is a genuine false positive here), especially if a nearby comment explains why.
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation
 
@@ -61,15 +67,31 @@ Launch all agents in a single message so they run concurrently. Collect all resu
 
 ### Phase 4: Report
 
-Output a concise list of **confirmed issues only**. For each:
-- One-line summary
-- File and line reference
-- Why it's a real problem (what you verified)
+Classify each confirmed issue by severity:
+
+- **substantive** — a real bug, logic/race/security/type error, breakage, or missing handling
+  that should be fixed
+- **trivial** — style, naming, formatting, optional polish, or nitpick
+
+Output a concise list of **confirmed issues only**. For each, report:
+
+- `severity`: substantive or trivial
+- `summary`: one line
+- `location`: file and line reference
+- `why`: what you verified that makes it a real problem
+- `fix`: the suggested fix in one sentence
 
 At the end, note how many candidates were dismissed as false positives (no need to list them individually unless the user asks).
 
+This structured format is the skill's output contract: callers that run Phases 1–4
+programmatically (e.g. `branch-review-loop`) consume these fields as-is — keep the field names
+and severity definitions stable.
+
 ### Phase 5: Act on results
 
-If there are confirmed issues, ask the user whether they want the fixes applied.
+If there are confirmed issues, first output the full Phase 4 report so the user sees every
+confirmed issue — severity, summary, location, why, and suggested fix — and only then ask whether
+they want the fixes applied. Never ask before the report is on screen, and never bury the issue
+list inside the question itself.
 
 If yes, apply fixes for all confirmed issues directly in the code. For each fix, explain what you're changing and why before editing.
