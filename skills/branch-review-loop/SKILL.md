@@ -75,17 +75,6 @@ bookkeeping; the reviewer never sees it.
    !`mktemp -u /tmp/branch-review-loop-commit-msg.XXXXXX`
    Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
 6. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
-7. Check whether nested subagent spawning is enabled — the reviewer agent spawned each round is
-   itself expected to spawn parallel `Explore` agents for `branch-review`'s Phase 3 verification,
-   which requires one level of nesting below this skill:
-   !`echo "${CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH:-0}"`
-   If the printed value is less than `2`, nested `Task` calls are disabled and the reviewer's
-   Phase 3 verification will error when it tries to spawn `Explore` agents. Print a one-line
-   reminder to the user with the printed value, noting that rounds may fail or return unreliable
-   results without parallel verification, and that they can set
-   `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` to `"2"` (e.g. in `~/.claude/settings.json`'s `env`
-   block) and restart the session to fix it. This is informational only — do not ask the user
-   anything here; continue straight into Phase 1.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 

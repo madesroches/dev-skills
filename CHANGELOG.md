@@ -2,6 +2,10 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.15.0] - 2026-07-29
+
+- Remove the loop skills' preflight warning about `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` — a depth of 2 increases token use too much for some use cases to recommend by default
+
 ## [1.14.0] - 2026-07-23
 
 - Parameterize `design-review-loop`'s reviewer model the same way `branch-review-loop` already is, so callers can request a stronger model for plan review
