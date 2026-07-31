@@ -29,8 +29,9 @@ The review skills follow a **candidate → parallel verification → report** pa
 potential issues, verify each against real code with parallel Explore agents, and report only
 confirmed ones, classified by severity. The loop skills (`/design-review-loop`,
 `/branch-review-loop`) wrap a review skill in an autonomous review → fix → commit cycle with a
-fresh reviewer each round. The composite skills chain the others via direct `Skill` invocations:
-`/implement-and-review` = implement + `branch-review-loop` (opus reviewer) + finalize, and
+fresh reviewer each round, then close out whatever the loop left behind — trivial issues and any
+still-open findings — in a final unreviewed pass. The composite skills chain the others via direct
+`Skill` invocations: `/implement-and-review` = implement + `branch-review-loop` (opus reviewer), and
 `/ship-issue` = `design` → `design-review-loop` → `implement-and-review` → `pr`. Nothing is
 restated, so a change to any skill is inherited by everything built on it.
 

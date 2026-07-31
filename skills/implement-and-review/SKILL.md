@@ -12,6 +12,9 @@ process against the resulting branch to catch and fix anything the implementatio
 The review loop's reviewer runs under `opus` regardless of the session's current model — this
 skill exists specifically to pair fast implementation with a stronger, independent review pass.
 
+The review loop closes out its own leftovers (its trivial issues and anything a non-clean stop
+left open) in its final phase, so this skill does not add a cleanup pass of its own.
+
 ## Roles
 
 - **Orchestrator** — this skill, running in the main context. Sequences implementation then
@@ -22,15 +25,9 @@ skill exists specifically to pair fast implementation with a stronger, independe
 - **Review loop** — delegated directly to the `branch-review-loop` skill via the `Skill` tool,
   passing the base branch, a round cap of 10, and a request to use `opus` for the reviewer —
   parameters that skill's own Phase 0 already supports, so this is not a deviation from its
-  process, just arguments it's designed to take. This skill automatically inherits any change to
-  that loop's logic since nothing is restated.
-- **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
-  spawned once after the review loop ends, only if it left anything unresolved (the trivial
-  issues it never fixes by design, plus any substantive issues still open because the loop hit
-  its round cap or stopped on non-convergence). Fixes all of it and commits. Unlike the loop's
-  own fixer, this pass has no follow-up review — it exists so the skill never hands back a
-  branch with known, unaddressed issues just because they were labeled "trivial" or the cap
-  was reached.
+  process, just arguments it's designed to take. It also runs its own finalize pass at the end,
+  clearing the trivial issues it skips each round and anything a non-clean stop left open. This
+  skill automatically inherits any change to that loop's logic since nothing is restated.
 
 ## Process
 
@@ -63,9 +60,6 @@ skill exists specifically to pair fast implementation with a stronger, independe
    `/tmp` would collide across concurrent invocations):
    !`mktemp -u /tmp/implement-and-review-impl-commit-msg.XXXXXX`
    Use this exact path as `<impl commit msg path>`.
-7. Generate a unique scratch path for the finalize commit message:
-   !`mktemp -u /tmp/implement-and-review-finalize-commit-msg.XXXXXX`
-   Use this exact path as `<finalize commit msg path>`.
 
 ### Phase 1: Implement (sonnet agent)
 
@@ -101,44 +95,18 @@ Confirm the implementer's commit landed (`git log --oneline -1`). Then invoke th
 `branch-review-loop` skill via the `Skill` tool, passing: the base branch `<base>` (resolved in
 this skill's Phase 0), an instruction to use a round cap of 10, and an instruction to use `opus`
 for the reviewer (e.g. `<base> — use opus for the reviewer and a round cap of 10`). It runs its
-own Phase 0 through Phase 5 autonomously — including its own baseline-commit check, which will
-find nothing to do since the tree is already clean after Phase 1's commit — committing after each
-fix round and terminating on its own (clean / only trivial / round cap / non-convergence /
-oscillation).
+whole process autonomously — including its own baseline-commit check, which will find nothing to
+do since the tree is already clean after Phase 1's commit — committing after each fix round,
+terminating on its own (clean / only trivial / round cap / non-convergence / oscillation), and
+then running its own finalize pass over whatever it left unresolved.
 
-Record which stopping condition ended the loop — Phase 4 reports this as the convergence status.
-Treat "clean" as **converged**; every other stopping condition (including "only trivial", since
-that means substantive issues were resolved but something is still left over) as **hit the round
-cap / did not fully converge** — be precise about which one it actually was.
+Record which stopping condition ended the loop, plus what its finalize pass cleared and anything
+it reported as still unfixed. Treat "clean" as **converged**; every other stopping condition
+(including "only trivial", since that means substantive issues were resolved but something was
+still left over for the finalize pass) as **did not fully converge** — be precise about which one
+it actually was.
 
-### Phase 3: Finalize — fix whatever the loop left behind
-
-Gather everything the review loop did not resolve:
-- Trivial issues from its last review round (never fixed by the loop, by design).
-- If the loop stopped on round cap, non-convergence, or oscillation: the unresolved
-  substantive issues from its last round too.
-
-If there is nothing left (the loop stopped clean with zero confirmed issues), skip this phase
-entirely — there is nothing to finalize or commit.
-
-Otherwise, print the list of items about to be fixed (one line each: `file: summary`), then
-spawn one finalize agent with `model: "sonnet"`, passing that list:
-
-> For each issue, edit the code to resolve it. Apply the suggested fix or a better one if the
-> suggestion is wrong. Keep edits minimal and localized. If the project has fast, relevant
-> checks for the touched files, run them to confirm your edits don't break the build.
->
-> When done: compose a commit message (concise subject + one bullet per edit), write it to
-> `<finalize commit msg path>` with the Write tool, stage only the files you changed by
-> explicit path, and commit with `git commit -F <finalize commit msg path>`. **Do not add a
-> `Co-Authored-By` line or any AI/agent attribution.**
->
-> Return a one-line description of each edit you made and the file you touched.
-
-If the finalize agent reports it could not resolve something (e.g. a substantive issue that
-needs a design decision), note that in the final summary rather than silently dropping it.
-
-### Phase 4: Final summary
+### Phase 3: Final summary
 
 Report:
 - The implementer's commit (SHA + one-line description) and any checks it ran.
@@ -146,8 +114,8 @@ Report:
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
   stopped with only trivial issues remaining, or stopped on non-convergence/oscillation with
   issues still outstanding at that point).
-- The finalize commit, if one was made (SHA + what it fixed), or note that nothing was left to
-  finalize.
+- Its finalize pass: the commit it made (SHA + what it fixed), or that nothing was left to
+  finalize — and any issue it reported as deliberately left unfixed.
 
 ## Notes
 
@@ -157,9 +125,9 @@ Report:
 - This skill builds directly on `branch-review-loop`; if that skill's process changes, this
   skill inherits the change because Phase 2 above invokes it directly via the `Skill` tool
   rather than restating its logic.
-- The finalize pass is deliberately unreviewed — it exists to guarantee the branch this skill
-  hands back has no known open issues, not to re-run the loop. If it introduces a new problem,
-  that's a cost accepted for closing out every round's leftovers in one pass.
+- Closing out the loop's leftovers — its trivial issues and anything a non-clean stop left
+  open — is the loop's own job, not this skill's. Do not add a cleanup pass here: it would
+  duplicate work the loop already did and re-fix issues that no longer exist.
 - No commit produced by this skill or its subagents should carry AI attribution (no
-  `Co-Authored-By` lines, no agent credit) — this applies to the implementer's commit, every
-  round commit the review loop produces, and the finalize commit.
+  `Co-Authored-By` lines, no agent credit) — this applies to the implementer's commit and every
+  commit the review loop produces, round and finalize alike.

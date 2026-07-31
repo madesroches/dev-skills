@@ -11,7 +11,9 @@ Iteratively harden the current branch against `$ARGUMENTS` (default: the repo's 
 branch — see Phase 0). Each round, a
 **fresh** reviewer agent runs the `branch-review` process against the branch's *current* diff,
 then a fixer agent applies the confirmed fixes in the code. The loop ends when a round surfaces
-no substantive issues, when the work stops converging, or when a round cap is hit.
+no substantive issues, when the work stops converging, or when a round cap is hit. A final pass
+then clears whatever the loop left behind — the trivial issues it deliberately skipped each round,
+plus any substantive issues still open — so the branch is handed back with no known open issues.
 
 This skill is **fully autonomous** once started — it does not prompt between rounds. It commits
 the fixes after each fixer pass so every round is diffable and revertable.
@@ -43,6 +45,10 @@ bookkeeping; the reviewer never sees it.
   each round that has substantive issues. Edits the code to resolve them and reports what it
   changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
   sufficient and keeps the loop cheaper.
+- **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
+  spawned at most once, after the loop ends, only if anything is left unresolved. Fixes the
+  leftovers in one pass. Unlike the per-round fixer, its work is **not** re-reviewed — the point is
+  to close out known issues, not to restart the loop.
 
 ## Process
 
@@ -73,7 +79,8 @@ bookkeeping; the reviewer never sees it.
    absolute path, but a fixed name under `/tmp` collides if the user runs this loop on another
    branch or worktree at the same time — so mint one per invocation:
    !`mktemp -u /tmp/branch-review-loop-commit-msg.XXXXXX`
-   Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
+   Use this exact path as `<commit msg path>` everywhere Phases 4 and 5 below reference it —
+   each commit overwrites it, which is fine since commits are made one at a time.
 6. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
@@ -94,7 +101,7 @@ the findings or context from previous rounds.
 > 1–4: gather the diff, identify candidate issues, verify them in parallel with `Explore` agents,
 > and confirm which are real.
 >
-> **Do not run Phase 5** — do not ask the user anything and do not edit any code.
+> **Do not run that skill's Phase 5** — do not ask the user anything and do not edit any code.
 >
 > Return confirmed issues only, as a list, exactly in the structured format that skill's Phase 4
 > defines — `severity`, `summary`, `location`, `why`, `fix` for each, with severity classified by
@@ -111,8 +118,9 @@ Partition the confirmed issues into `substantive` and `trivial`.
 Stop the loop and go to **Phase 5** if any of these hold:
 
 - **Clean:** there are no confirmed issues (`NO ISSUES`).
-- **Only trivial remain:** there are zero substantive issues. Trivial issues are reported, not
-  fixed — fixing them round after round invites churn and they are not worth a loop.
+- **Only trivial remain:** there are zero substantive issues. Trivial issues are not fixed
+  *inside* the loop — fixing them round after round invites churn and they are not worth
+  re-reviewing — they are cleared once at the end by the Phase 5 finalize pass.
 - **Round cap:** `N` has reached the cap (default 5).
 - **Non-convergence:** the set of substantive issues this round is essentially the same as a
   previous round's (compare against `history` by summary/location). This means the fixer failed to
@@ -138,7 +146,8 @@ issues from this round (summary, location, why, fix for each). Instruct it to:
 > (lint/tests for the touched files), run them to confirm your edits don't break the build. When
 > done, return a one-line description of each edit you made and the file you touched.
 
-Trivial issues from this round are **not** sent to the fixer. They are accumulated for the final summary.
+Trivial issues from this round are **not** sent to the fixer — only the last round's trivial
+issues matter, and they are handled once by the Phase 5 finalize pass.
 
 ### Phase 4: Commit and loop
 
@@ -168,19 +177,54 @@ Run `git add` and `git commit` as **separate** Bash calls — never chained with
 plain `git …` invocation that matches the `Bash(git *)` allowlist and clears the checker without a
 prompt.
 
-### Phase 5: Final summary
+### Phase 5: Finalize — fix whatever the loop left behind
 
-When the loop ends, output a concise report:
+Gather everything the loop did not resolve, from the **last** review round only (earlier rounds'
+issues were either fixed or re-reported by the next reviewer):
 
-- **Outcome** — which stopping condition fired (clean / only trivial / round cap / non-convergence / oscillation).
+- Its trivial issues — never fixed inside the loop, by design.
+- If the loop stopped on round cap, non-convergence, or oscillation: its unresolved substantive
+  issues too.
+
+If there is nothing left (the loop stopped clean with zero confirmed issues), skip this phase
+entirely — there is nothing to finalize or commit.
+
+Otherwise, print the list of items about to be fixed — one line each: `file: summary` — labeled
+e.g. `Finalizing X leftover issue(s):`. Then spawn one finalize agent with `model: "sonnet"`,
+passing that list (summary, location, why, fix for each). Instruct it to:
+
+> For each issue, edit the code to resolve it. Apply the suggested fix or a better one if the
+> suggestion is wrong. Keep edits minimal and localized — change only what the issue requires; do
+> not refactor unrelated code or introduce new scope. If any issue cannot be resolved without a
+> decision you are not in a position to make, leave it alone and say so rather than guessing. If
+> the project has fast, relevant checks (lint/tests for the touched files), run them to confirm
+> your edits don't break the build. When done, return a one-line description of each edit you made
+> and the file you touched, plus anything you deliberately left unfixed and why.
+
+When it returns, commit its edits using the **same commit protocol as Phase 4** (compose a
+meaningful message, write it to `<commit msg path>` with the Write tool, `git add` the changed
+files by explicit path, `git commit -F <commit msg path>`, each git call separate, no AI
+attribution). If the agent made no edits, make no commit.
+
+Do **not** re-review after this pass and do **not** re-enter the loop — this is a single closing
+pass. Anything the finalize agent reports as deliberately left unfixed goes into the Phase 6
+summary rather than being silently dropped.
+
+### Phase 6: Final summary
+
+When the loop and the finalize pass are done, output a concise report:
+
+- **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap / non-convergence / oscillation).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
-- **Remaining issues** — any trivial issues from the last review, and (if the loop stopped on cap or
-  non-convergence) the unresolved substantive issues, so the user can decide what to do next.
-- **Commits** — the per-round fix commits created (short SHA + subject line), so the user can
-  review or revert the diff.
+- **Finalize pass** — what it cleared, or that there was nothing left to finalize.
+- **Remaining issues** — anything the finalize agent left unfixed, so the user can decide what to
+  do next.
+- **Commits** — the per-round fix commits and the finalize commit (short SHA + subject line), so
+  the user can review or revert the diff.
 
 Do not prompt the user during the loop. If the loop stopped on non-convergence or the round cap with
-substantive issues outstanding, say so plainly and hand control back — do not keep looping.
+substantive issues outstanding, say so plainly — the finalize pass takes one shot at them, and
+whatever survives is reported, not looped on again.
 
 ## Notes
 
@@ -188,6 +232,10 @@ substantive issues outstanding, say so plainly and hand control back — do not 
   loop work; if you ever find yourself summarizing earlier findings into the reviewer prompt, stop.
 - The orchestrator never edits code or runs the review itself — delegating both keeps its own context
   from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
+- The Phase 5 finalize pass is deliberately unreviewed. Re-reviewing it would restart the loop over
+  changes that are, by construction, the least consequential ones left. If it introduces a new
+  problem, that's the accepted cost of never handing back a branch with known open issues —
+  callers get that guarantee from this skill and should not re-implement it.
 - This skill builds directly on `branch-review`; if that skill's process changes, this loop inherits
   the change because the reviewer agent is told to follow the `branch-review` SKILL.md at its
   resolved absolute path (`<review skill path>`). The issue fields and severity definitions come

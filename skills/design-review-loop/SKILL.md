@@ -10,7 +10,10 @@ allowed-tools: Read, Write, Bash(git *), Bash(echo *), Bash(dirname *), Bash(mkt
 Iteratively harden the design plan at `$ARGUMENTS`. Each round, a **fresh** reviewer
 agent runs the `design-review` process against the plan's *current* state, then a fixer
 agent applies the confirmed fixes. The loop ends when a round surfaces no substantive
-issues, when the work stops converging, or when a round cap is hit.
+issues, when the work stops converging, or when a round cap is hit. A final pass then
+clears whatever the loop left behind — the trivial issues it deliberately skipped each
+round, plus any substantive issues still open — so the plan is handed back with no known
+open issues except the questions that genuinely need the user's decision.
 
 This skill is **fully autonomous** once started — it does not prompt between rounds. It
 commits the plan file after each fixer pass so every round is diffable and revertable.
@@ -42,6 +45,10 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
   each round that has substantive issues. Edits the plan file to resolve them and reports what it
   changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
   sufficient and keeps the loop cheaper.
+- **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
+  spawned at most once, after the loop ends, only if anything is left unresolved. Fixes the
+  leftovers in one pass. Unlike the per-round fixer, its work is **not** re-reviewed — the point is
+  to close out known issues, not to restart the loop.
 
 ## Process
 
@@ -62,7 +69,8 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
    absolute path, but a fixed name under `/tmp` collides if the user runs this loop on another
    branch or worktree at the same time — so mint one per invocation:
    !`mktemp -u /tmp/design-review-loop-commit-msg.XXXXXX`
-   Use this exact path as `<commit msg path>` everywhere Phase 4 below references it.
+   Use this exact path as `<commit msg path>` everywhere Phases 4 and 5 below reference it —
+   each commit overwrites it, which is fine since commits are made one at a time.
 5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
@@ -83,7 +91,7 @@ never the findings or context from previous rounds.
 > Phases 1–4: gather context, identify candidate issues, verify them in parallel with `Explore`
 > agents, and confirm which are real.
 >
-> **Do not run Phase 5** — do not ask the user anything and do not edit the plan.
+> **Do not run that skill's Phase 5** — do not ask the user anything and do not edit the plan.
 >
 > Return confirmed issues only, as a list, exactly in the structured format that skill's Phase 4
 > defines — `severity`, `summary`, `section`, `why`, `fix` for each, with severity classified by
@@ -105,8 +113,9 @@ Stop the loop and go to **Phase 5** if any of these hold:
 
 - **Clean:** there are no confirmed issues (`NO ISSUES`).
 - **Nothing fixable remains:** there are zero substantive issues (only trivial issues and/or
-  `needs user decision` questions). Trivial issues are reported, not fixed — fixing them round
-  after round invites churn and they are not worth a loop.
+  `needs user decision` questions). Trivial issues are not fixed *inside* the loop — fixing them
+  round after round invites churn and they are not worth re-reviewing — they are cleared once at
+  the end by the Phase 5 finalize pass.
 - **Round cap:** `N` has reached the cap (default 5).
 - **Non-convergence:** the set of substantive issues this round is essentially the same as a
   previous round's (compare against `history` by summary/section). This means the fixer failed
@@ -131,8 +140,8 @@ issues from this round (summary, section, why, fix for each). Instruct it to:
 > what the issue requires; do not rewrite unrelated sections. Do not introduce new scope.
 > When done, return a one-line description of each edit you made and the section you touched.
 
-Trivial issues from this round are **not** sent to the fixer. They are accumulated for the
-final summary.
+Trivial issues from this round are **not** sent to the fixer — only the last round's trivial
+issues matter, and they are handled once by the Phase 5 finalize pass.
 
 ### Phase 4: Commit and loop
 
@@ -161,23 +170,60 @@ Run `git add` and `git commit` as **separate** Bash calls — never chained with
 plain `git …` invocation that matches the `Bash(git *)` allowlist and clears the checker without a
 prompt.
 
-### Phase 5: Final summary
+### Phase 5: Finalize — fix whatever the loop left behind
 
-When the loop ends, output a concise report:
+Gather everything the loop did not resolve, from the **last** review round only (earlier rounds'
+issues were either fixed or re-reported by the next reviewer):
 
-- **Outcome** — which stopping condition fired (clean / nothing fixable / round cap / non-convergence / oscillation).
+- Its trivial issues — never fixed inside the loop, by design.
+- If the loop stopped on round cap, non-convergence, or oscillation: its unresolved substantive
+  issues too.
+
+`needs user decision` questions are **never** sent to the finalize agent — they stay in
+`## Open Questions` for the user and are surfaced in Phase 6.
+
+If there is nothing left (the loop stopped clean, or only `needs user decision` questions remain),
+skip this phase entirely — there is nothing to finalize or commit.
+
+Otherwise, print the list of items about to be fixed — one line each: `section: summary` — labeled
+e.g. `Finalizing X leftover issue(s):`. Then spawn one finalize agent with `model: "sonnet"`,
+passing the plan path and that list (summary, section, why, fix for each). Instruct it to:
+
+> For each issue, edit the plan file at `<plan path>` to resolve it. Apply the suggested fix or a
+> better one if the suggestion is wrong. Keep edits minimal and localized — change only what the
+> issue requires; do not rewrite unrelated sections and do not introduce new scope. If any issue
+> cannot be resolved without a decision you are not in a position to make, leave it alone and say
+> so rather than guessing. When done, return a one-line description of each edit you made and the
+> section you touched, plus anything you deliberately left unfixed and why.
+
+When it returns, commit the plan file using the **same commit protocol as Phase 4** (compose a
+meaningful message, write it to `<commit msg path>` with the Write tool, `git add <plan file>`,
+`git commit -F <commit msg path>`, each git call separate, no AI attribution). If the agent made
+no edits, make no commit.
+
+Do **not** re-review after this pass and do **not** re-enter the loop — this is a single closing
+pass. Anything the finalize agent reports as deliberately left unfixed goes into the Phase 6
+summary rather than being silently dropped.
+
+### Phase 6: Final summary
+
+When the loop and the finalize pass are done, output a concise report:
+
+- **Outcome** — which stopping condition ended the loop (clean / nothing fixable / round cap / non-convergence / oscillation).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
-- **Remaining issues** — any trivial issues from the last review, and (if the loop stopped on cap
-  or non-convergence) the unresolved substantive issues, so the user can decide what to do next.
+- **Finalize pass** — what it cleared, or that there was nothing left to finalize.
+- **Remaining issues** — anything the finalize agent left unfixed, so the user can decide what to
+  do next.
 - **Open questions left for the user** — any open questions the reviewer returned in the
   `needs user decision` category (still in `## Open Questions`). Call these out explicitly rather
-  than burying them among trivial issues — they are the one thing the autonomous loop deliberately
-  does not resolve.
-- **Commits** — the per-round fix commits created (short SHA + subject line), so the user can
-  review or revert the diff.
+  than burying them among the rest — they are the one thing this skill deliberately does not
+  resolve, in the loop or in the finalize pass.
+- **Commits** — the per-round fix commits and the finalize commit (short SHA + subject line), so
+  the user can review or revert the diff.
 
 Do not prompt the user during the loop. If the loop stopped on non-convergence or the round cap
-with substantive issues outstanding, say so plainly and hand control back — do not keep looping.
+with substantive issues outstanding, say so plainly — the finalize pass takes one shot at them, and
+whatever survives is reported, not looped on again.
 
 ## Notes
 
@@ -185,6 +231,10 @@ with substantive issues outstanding, say so plainly and hand control back — do
   loop work; if you ever find yourself summarizing earlier findings into the reviewer prompt, stop.
 - The orchestrator never edits the plan or runs the review itself — delegating both keeps its own
   context from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
+- The Phase 5 finalize pass is deliberately unreviewed. Re-reviewing it would restart the loop over
+  changes that are, by construction, the least consequential ones left. If it introduces a new
+  problem, that's the accepted cost of never handing back a plan with known open issues — callers
+  get that guarantee from this skill and should not re-implement it.
 - This skill builds directly on `design-review`; if that skill's process changes, this loop inherits
   the change because the reviewer agent is told to follow the `design-review` SKILL.md at its
   resolved absolute path (`<review skill path>`). The issue fields, severity definitions, and the

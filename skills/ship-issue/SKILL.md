@@ -83,9 +83,10 @@ loop's process — so this chain never restates any skill's logic at any level.
 - **`design`** — invoked with the issue reference. Researches the codebase and writes the plan
   document. Produces no code.
 - **`design-review-loop`** — invoked with the plan path and a round cap of 10 (double its own
-  default). Autonomously reviews and fixes the plan until it converges, committing each round.
+  default). Autonomously reviews and fixes the plan until it converges, committing each round,
+  then clears its own leftovers in a final pass.
 - **`implement-and-review`** — invoked with the plan path. Implements the plan (sonnet), commits,
-  runs the `opus` `branch-review-loop`, then finalizes.
+  and runs the `opus` `branch-review-loop`, which reviews, fixes, and finalizes.
 - **`pr`** — invoked with no arguments. Runs lints/tests, moves the plan to `tasks/completed/`,
   updates the changelog, pushes, and opens the PR.
 
@@ -164,17 +165,18 @@ Invoke the `design-review-loop` skill via the `Skill` tool, passing the **plan p
 an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
 use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
 is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
-committing after each fix round, and terminates on its own (clean / nothing fixable / round cap /
-non-convergence). Note its reported outcome for the final summary, then continue regardless — a
-non-clean stop leaves remaining issues that `implement-and-review`'s own review pass and the
-plan's reviewers can still surface.
+committing after each fix round, terminates on its own (clean / nothing fixable / round cap /
+non-convergence), and then clears whatever it left unresolved in its own finalize pass. Note its
+reported outcome for the final summary, then continue regardless — anything its finalize pass left
+unfixed, plus any `needs user decision` open questions, is carried forward, not stopped on: the
+implementation stage and its review pass can still surface what matters.
 
 ### Phase 3: Implement and independently review
 
 Invoke the `implement-and-review` skill via the `Skill` tool, passing the **plan path** as its
 arguments. Its own preflight will find an existing feature branch (created in Phase 0) and a clean
 tree (the review loop committed its rounds), so it implements in place. It implements the plan,
-commits, runs the `opus` review loop, and finalizes.
+commits, and runs the `opus` review loop, which reviews, fixes, and finalizes on its own.
 
 If it reports the implementer was **blocked** (could not complete the plan, or failing checks it
 could not resolve), relay that and **stop** — do not proceed to open a PR for an incomplete
@@ -197,8 +199,10 @@ and all commits are intact; the user (or a follow-up run) can fix and re-run `/p
 Report the whole chain concisely:
 - The issue (number + title) and the branch it was shipped on.
 - The plan file path and its commit.
-- `design-review-loop`'s outcome (converged, or which stopping condition fired + any remaining issues).
-- `implement-and-review`'s outcome (implementer commit, review-loop convergence status, finalize commit — or the blocker it stopped on).
+- `design-review-loop`'s outcome (converged, or which stopping condition fired), what its finalize
+  pass cleared, and any open questions it left for the user.
+- `implement-and-review`'s outcome (implementer commit, review-loop convergence status, the loop's
+  finalize commit — or the blocker it stopped on).
 - The PR URL, or the phase at which the chain stopped and why.
 
 ## Notes

@@ -2,6 +2,12 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.16.0] - 2026-07-30
+
+- Both loop skills now end with a finalize pass that fixes everything the loop left behind — the trivial issues it skips each round, plus any substantive issues still open when it stops on cap/non-convergence/oscillation — and commits it (`design-review-loop` still leaves `needs user decision` questions for the user)
+- `implement-and-review` drops its own finalize phase; that cleanup is now the review loop's job, so the skill is again a pure composition with no deviation
+- `ship-issue` reports each loop's finalize outcome instead of assuming leftovers get carried forward
+
 ## [1.15.0] - 2026-07-29
 
 - Remove the loop skills' preflight warning about `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` — a depth of 2 increases token use too much for some use cases to recommend by default
