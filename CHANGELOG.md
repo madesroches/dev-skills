@@ -2,6 +2,11 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.17.0] - 2026-08-07
+
+- `design` adds a Phase 4 that builds self-contained HTML mockups for features with a strong UX/UI component, styled to match the app's existing fonts/colors/components; when multiple layouts are equally valid it builds 2-3 options instead of picking one, and the plan's new Mockups section links to them
+- Mockups are local files only — the skill never uses the Artifact tool to publish them
+
 ## [1.16.0] - 2026-07-30
 
 - Both loop skills now end with a finalize pass that fixes everything the loop left behind — the trivial issues it skips each round, plus any substantive issues still open when it stops on cap/non-convergence/oscillation — and commits it (`design-review-loop` still leaves `needs user decision` questions for the user)
