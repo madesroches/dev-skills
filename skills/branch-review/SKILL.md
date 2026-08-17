@@ -32,6 +32,13 @@ Scan the diff for potential problems:
 - API design issues (confusing interfaces, leaky abstractions)
 - Performance implications (N+1 queries, repeated work in hot paths, unbounded growth — e.g. unnecessary re-renders in UI code)
 - Test coverage gaps (new code without tests, existing tests invalidated by changes)
+- Tests that don't earn their cost — tests are not free (CI time, flakiness, fixture and
+  maintenance burden), so a heavyweight test has to buy something a cheap one can't. Treat each
+  as a candidate: a live DB, real network call, real service, or container-backed test for logic
+  a unit test would cover fully; an integration test whose assertions only exercise pure
+  functions; a new test that duplicates coverage an existing test already provides; a test that
+  asserts its own mocks rather than real behavior; heavyweight fixtures or harnesses added for a
+  change that doesn't touch the dependency they exist to exercise
 - Project convention violations (naming, patterns, style inconsistent with surrounding code)
 - Documentation gaps — public APIs, config options, CLI flags, or behavior changed by the diff
   that existing docs (READMEs, guides) still describe the old way, or new user-facing surface
@@ -60,6 +67,14 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - For a documentation candidate: does a relevant doc file exist, does it cover the changed
      area, and does the diff actually make it inaccurate (or introduce user-facing surface it
      should cover)?
+   - For a test-cost candidate: ask what the cheap test would fail to catch. Confirm it only if
+     the expensive dependency is genuinely unnecessary — the assertions never depend on real
+     schema, migration, driver, serialization, wire-format, or transaction behavior — **and** a
+     cheaper seam already exists in this repo (an existing fake, in-memory adapter, or unit-test
+     fixture pattern for the same area; go read the neighbouring tests to check). Name the
+     cheaper test that should replace it. Dismiss it as a false positive when the real dependency
+     is itself the thing under test, or when no cheaper seam exists and building one would cost
+     more than the test saves.
    - For a suppressed lint (e.g. `#[allow(clippy::...)]` / `#[expect(clippy::...)]`): what exactly does that lint flag, and does it point to a real concern in this code? Confirm it only if the suppression hides a genuine problem that should be fixed instead — read the annotated code and judge whether the fix is warranted. Dismiss it as a false positive when the suppression is justified (intentional, idiomatic, or the lint is a genuine false positive here), especially if a nearby comment explains why.
 4. Instructions to return a verdict for each candidate: **confirmed** or **false positive**, with a one-line explanation
 

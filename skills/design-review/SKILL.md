@@ -36,7 +36,14 @@ Scan the plan for potential problems:
 - **Pattern violations** — approaches that conflict with established codebase conventions
 - **Type safety gaps** — proposed interfaces that lose type information or require unsafe casts
 - **Missing error handling** at system boundaries
-- **Test strategy gaps** — untestable designs, missing edge cases, no integration coverage
+- **Test strategy gaps** — untestable designs, missing edge cases, no integration coverage where
+  components genuinely interact
+- **Test cost not earned** — tests are not free (CI time, flakiness, fixture and maintenance
+  burden), so weigh what each test the plan proposes buys against what it costs. Treat as a
+  candidate: a live-DB, real-service, network, or container-backed test for logic a unit test
+  would cover fully; an end-to-end test standing in for a cheap assertion on a pure function; a
+  test plan that duplicates coverage the existing suite already has; new heavyweight fixtures or
+  harnesses for a change that doesn't touch the dependency they exist to exercise
 - **Performance concerns** — N+1 queries, unnecessary re-renders, unbounded data structures
 - **New dependencies** — every third-party package, library, or tool the plan proposes adding. Treat
   each as a candidate to scrutinize on two axes: **value** (does it earn its place, or could existing
@@ -65,6 +72,13 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Is the "missing step" truly missing, or is it handled implicitly by existing code or tooling?
    - Is the "over-engineering" concern valid, or does the complexity serve a real need evident in the codebase?
    - Are there existing patterns or utilities the plan overlooks that would simplify or invalidate a step?
+   - For test-cost candidates: read the repo's existing tests for this area — is there already a
+     cheaper seam (a fake, in-memory adapter, or unit-test fixture pattern) the plan overlooks?
+     Ask what the cheap test could not catch, and confirm only when the plan's expensive test
+     buys nothing the cheap one wouldn't; name the cheaper test that should replace it. Dismiss
+     it when the real dependency (schema, migration, driver, wire format, transaction semantics)
+     is itself what needs verifying, or when no cheaper seam exists and building one would cost
+     more than the test saves.
    - For documentation candidates: does a relevant doc file exist? Does it cover the area being changed? Would it become inaccurate if the plan were implemented as written?
    - For new-dependency candidates: confirm the package is actually new (not already a
      direct or transitive dependency). Weigh whether it brings enough value to justify the added
