@@ -2,6 +2,12 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.18.0] - 2026-08-17
+
+- Both review skills now judge whether tests earn their cost, not just whether tests exist: a new candidate category flags live-DB/real-service/network/container-backed tests for logic a unit test would cover fully, integration tests that only assert pure-function behavior, tests duplicating existing coverage, tests asserting their own mocks, and heavyweight fixtures added for a change that doesn't touch the dependency they exercise
+- Each has a matching verification step that requires proving the cheap test couldn't catch it *and* that a cheaper seam already exists in the repo — dismissing the candidate when the real dependency is itself under test (schema, migration, driver, wire format, transaction semantics) or when building a seam would cost more than the test saves
+- `design-review`'s "no integration coverage" gap is scoped to where components genuinely interact, so it no longer reads as a blanket push for heavier tests
+
 ## [1.17.0] - 2026-08-07
 
 - `design` adds a Phase 4 that builds self-contained HTML mockups for features with a strong UX/UI component, styled to match the app's existing fonts/colors/components; when multiple layouts are equally valid it builds 2-3 options instead of picking one, and the plan's new Mockups section links to them
