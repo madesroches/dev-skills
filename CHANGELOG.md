@@ -2,6 +2,10 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.19.0] - 2026-08-26
+
+- `pr` now moves a plan's associated `tasks/<slug>_mockups/` folder to `tasks/completed/` alongside the plan file, instead of leaving it behind in `tasks/`
+
 ## [1.18.0] - 2026-08-17
 
 - Both review skills now judge whether tests earn their cost, not just whether tests exist: a new candidate category flags live-DB/real-service/network/container-backed tests for logic a unit test would cover fully, integration tests that only assert pure-function behavior, tests duplicating existing coverage, tests asserting their own mocks, and heavyweight fixtures added for a change that doesn't touch the dependency they exercise

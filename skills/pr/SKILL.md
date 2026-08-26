@@ -49,7 +49,8 @@ The plan file should already be part of the branch's diff (moved/updated and com
    - Read it and check if all implementation steps are completed based on the commits
    - If incomplete, ask the user: "The plan still has incomplete steps. Should I update it and commit before creating the PR?"
    - If done, move it to `tasks/completed/`, commit the move, then proceed
-4. If no plan file is found, that's fine — proceed without one
+4. If the plan has an associated mockups folder (`tasks/<slug>_mockups/`, referenced from the plan's `## Mockups` section) and it still exists at that path, move it to `tasks/completed/<slug>_mockups/` in the same commit as the plan move
+5. If no plan file is found, that's fine — proceed without one
 
 ### Phase 4: Update Changelog
 
