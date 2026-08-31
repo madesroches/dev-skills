@@ -86,12 +86,14 @@ Each step should reference specific files to modify or create.
 Quick reference list of files that will be touched.
 
 ## Trade-offs
-What alternatives were considered and why this approach was chosen.
+What alternatives were considered and why this approach was chosen — the comparison made at
+authoring time.
 
 ## Decisions
-One line per settled choice, accepted risk, or declined alternative — the record that stops a
-settled question from being re-argued later. Add a line here instead of writing a paragraph of
-defense into the section the decision touches.
+One line per settled outcome — a choice, accepted risk, or declined alternative, including ones
+settled later during review — the record that stops a settled question from being re-argued
+later. Add a line here instead of writing a paragraph of defense into the section the decision
+touches.
 
 ## Documentation
 Which project documentation pages need to be created or updated.

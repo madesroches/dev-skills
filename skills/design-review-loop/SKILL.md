@@ -72,9 +72,10 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
    !`mktemp -u /tmp/design-review-loop-commit-msg.XXXXXX`
    Use this exact path as `<commit msg path>` everywhere Phases 4 and 5 below reference it —
    each commit overwrites it, which is fine since commits are made one at a time.
-5. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per
-   round. Also record the plan's baseline line count (`wc -l <plan file>`) and start an empty
-   record of per-round net line deltas.
+5. Initialize round counter `N = 0`, an empty `history` of substantive issue summaries per
+   round, and an empty `deferred` record of trivial issue summaries per round. Also record the
+   plan's baseline line count (`wc -l <plan file>`) and start an empty record of per-round net
+   line deltas.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
@@ -122,11 +123,11 @@ substantive:
   Phase 4). The finding is real, but its fix invents design surface — a new name, mechanism, or
   convention — that is the user's call, not an autonomous one.
 
-Before applying the stop conditions, compare this round's issues against trivial issues deferred
-in earlier rounds (match by summary/section, as for non-convergence). A re-report of a deferred
-trivial keeps its **trivial** classification for stop-condition purposes regardless of the
-severity this round's fresh reviewer assigned — reclassification by a reviewer who never saw the
-deferral is noise, not escalation.
+Before applying the stop conditions, compare this round's issues against `deferred` (match by
+summary/section, as for non-convergence). A re-report of a deferred trivial keeps its
+**trivial** classification for stop-condition purposes regardless of the severity this round's
+fresh reviewer assigned — reclassification by a reviewer who never saw the deferral is noise, not
+escalation.
 
 Stop the loop and go to **Phase 5** if any of these hold:
 
@@ -148,7 +149,8 @@ Stop the loop and go to **Phase 5** if any of these hold:
   review shrinks or holds a plan as often as it grows one; monotonic growth means the loop is
   adding faster than it resolves.
 
-Otherwise, record this round's substantive issue summaries in `history` and continue to Phase 3.
+Otherwise, record this round's substantive issue summaries in `history`, append this round's
+trivial issue summaries to `deferred`, and continue to Phase 3.
 
 ### Phase 3: Fix (per-round agent)
 

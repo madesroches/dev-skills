@@ -81,7 +81,8 @@ bookkeeping; the reviewer never sees it.
    !`mktemp -u /tmp/branch-review-loop-commit-msg.XXXXXX`
    Use this exact path as `<commit msg path>` everywhere Phases 4 and 5 below reference it —
    each commit overwrites it, which is fine since commits are made one at a time.
-6. Initialize round counter `N = 0` and an empty `history` of substantive issue summaries per round.
+6. Initialize round counter `N = 0`, an empty `history` of substantive issue summaries per round,
+   and an empty `deferred` record of trivial issue summaries per round.
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
@@ -115,11 +116,11 @@ Collect the reviewer's structured result.
 
 Partition the confirmed issues into `substantive` and `trivial`.
 
-Before applying the stop conditions, compare this round's issues against trivial issues deferred
-in earlier rounds (match by summary/location, as for non-convergence). A re-report of a deferred
-trivial keeps its **trivial** classification for stop-condition purposes regardless of the
-severity this round's fresh reviewer assigned — reclassification by a reviewer who never saw the
-deferral is noise, not escalation.
+Before applying the stop conditions, compare this round's issues against `deferred` (match by
+summary/location, as for non-convergence). A re-report of a deferred trivial keeps its
+**trivial** classification for stop-condition purposes regardless of the severity this round's
+fresh reviewer assigned — reclassification by a reviewer who never saw the deferral is noise, not
+escalation.
 
 Stop the loop and go to **Phase 5** if any of these hold:
 
@@ -136,7 +137,8 @@ Stop the loop and go to **Phase 5** if any of these hold:
   is normal; two is the signature of a loop manufacturing its own review surface, where each fix
   enlarges the diff and the enlargement is the next round's finding.
 
-Otherwise, record this round's substantive issue summaries in `history` and continue to Phase 3.
+Otherwise, record this round's substantive issue summaries in `history`, append this round's
+trivial issue summaries to `deferred`, and continue to Phase 3.
 
 ### Phase 3: Fix (per-round agent)
 
@@ -150,9 +152,10 @@ issues from this round (summary, location, why, fix for each). Instruct it to:
 
 > For each issue, edit the code to resolve it. Apply the suggested fix or a better one if the
 > suggestion is wrong. Keep edits minimal and localized — change only what the issue requires; do
-> not refactor unrelated code or introduce new scope. If the project has fast, relevant checks
-> (lint/tests for the touched files), run them to confirm your edits don't break the build. When
-> done, return a one-line description of each edit you made and the file you touched.
+> not refactor unrelated code or introduce new scope. When an issue's fix is a **deletion**,
+> delete — do not soften it into a rewrite that keeps the text. If the project has fast, relevant
+> checks (lint/tests for the touched files), run them to confirm your edits don't break the
+> build. When done, return a one-line description of each edit you made and the file you touched.
 
 Trivial issues from this round are **not** sent to the fixer — only the last round's trivial
 issues matter, and they are handled once by the Phase 5 finalize pass.
@@ -204,7 +207,8 @@ passing that list (summary, location, why, fix for each). Instruct it to:
 
 > For each issue, edit the code to resolve it. Apply the suggested fix or a better one if the
 > suggestion is wrong. Keep edits minimal and localized — change only what the issue requires; do
-> not refactor unrelated code or introduce new scope. If any issue cannot be resolved without a
+> not refactor unrelated code or introduce new scope. When an issue's fix is a **deletion**,
+> delete rather than rewriting around the text. If any issue cannot be resolved without a
 > decision you are not in a position to make, leave it alone and say so rather than guessing. If
 > the project has fast, relevant checks (lint/tests for the touched files), run them to confirm
 > your edits don't break the build. When done, return a one-line description of each edit you made
