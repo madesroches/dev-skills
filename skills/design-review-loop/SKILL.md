@@ -79,8 +79,9 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
 
 Set a round cap of **5** by default. If the user asked for a different cap, use that instead.
 
-Set a growth budget of **10%** of the baseline line count by default (see Phase 2's growth stop
-condition). If the user asked for a different budget, use that instead.
+Set a growth budget of **10% of the baseline line count, or 25 lines, whichever is larger** by
+default (see Phase 2's growth stop condition). If the user asked for a different budget, use that
+instead.
 
 Set no reviewer model override by default — the reviewer inherits the session's current model.
 If the invocation explicitly requests a different model for the reviewer (e.g. "use opus for the
@@ -148,7 +149,7 @@ Stop the loop and go to **Phase 5** if any of these hold:
   is normal; two is the signature of a loop manufacturing its own review surface, where each fix
   enlarges the plan and the enlargement is the next round's finding.
 - **Growth:** at least two rounds have been committed, the plan grew in every one of them, and
-  its net growth over the Phase 0 baseline exceeds the growth budget (default 10%). A converging
+  its net growth over the Phase 0 baseline exceeds the growth budget set there. A converging
   review shrinks or holds a plan as often as it grows one; monotonic growth means the loop is
   adding faster than it resolves.
 

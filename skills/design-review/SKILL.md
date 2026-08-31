@@ -159,4 +159,6 @@ confirmed issue — severity, summary, section, why, and suggested fix, plus any
 decision` questions — and only then ask whether they want the fixes applied. Never ask before the
 report is on screen, and never bury the issue list inside the question itself.
 
-If yes, apply fixes directly in the plan file for all confirmed issues. For each fix, explain what you're changing and why before editing.
+If yes, apply fixes directly in the plan file for all confirmed issues except those whose fix is
+prefixed `requires user judgment:` — ask about each of those individually, or leave it to the
+user. For each fix, explain what you're changing and why before editing.

@@ -90,10 +90,10 @@ What alternatives were considered and why this approach was chosen — the compa
 authoring time.
 
 ## Decisions
-One line per settled outcome — a choice, accepted risk, or declined alternative, including ones
-settled later during review — the record that stops a settled question from being re-argued
-later. Add a line here instead of writing a paragraph of defense into the section the decision
-touches.
+One line per outcome settled after authoring — a review finding accepted, a user call, or an
+accepted risk — never a restatement of a Trade-offs entry. The record that stops a settled
+question from being re-argued later. Add a line here instead of writing a paragraph of defense
+into the section the decision touches.
 
 ## Documentation
 Which project documentation pages need to be created or updated.

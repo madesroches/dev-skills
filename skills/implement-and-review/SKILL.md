@@ -95,10 +95,10 @@ Confirm the implementer's commit landed (`git log --oneline -1`). Then invoke th
 `branch-review-loop` skill via the `Skill` tool, passing: the base branch `<base>` (resolved in
 this skill's Phase 0), an instruction to use a round cap of 10, and an instruction to use `opus`
 for the reviewer (e.g. `<base> — use opus for the reviewer and a round cap of 10`). It runs its
-whole process autonomously — including its own baseline-commit check, which will find nothing to
-do since the tree is already clean after Phase 1's commit — committing after each fix round,
-terminating on its own (clean / only trivial / round cap / non-convergence / oscillation-accretion), and
-then running its own finalize pass over whatever it left unresolved.
+whole process autonomously — including its own baseline-commit check, which will find nothing to do
+since the tree is already clean after Phase 1's commit — committing after each fix round,
+terminating on its own (clean / only trivial / round cap / non-convergence / oscillation-accretion),
+and then running its own finalize pass over whatever it left unresolved.
 
 Record which stopping condition ended the loop, plus what its finalize pass cleared and anything
 it reported as still unfixed. Treat "clean" as **converged**; every other stopping condition
