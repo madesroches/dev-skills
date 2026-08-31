@@ -19,7 +19,21 @@ Review the design plan at `$ARGUMENTS`.
 
 ### Phase 2: Identify candidate issues
 
-Scan the plan for potential problems:
+A plan can fail in two directions: missing what the goal needs, and carrying what it does not.
+Scan for both, explicitly and separately — once for gaps (the categories below), and once for
+excess. Excess candidates include: rationale argued more than once; defenses of decisions nobody
+in the codebase or the plan contests; justification an order of magnitude longer than the
+instruction it supports; work items (files, steps, tests) the goal does not require. **A finding
+whose fix is a deletion is a finding** — report it like any other, naming exactly the lines or
+section to delete.
+
+If the plan has a `## Decisions` section (one line per settled choice, accepted risk, or declined
+alternative), treat its entries as settled: do not raise a candidate that re-argues a listed
+decision unless the codebase makes it factually wrong. Inline prose that defends a decision at
+paragraph length is itself an excess candidate — the fix is a one-line entry in `## Decisions`
+replacing the paragraph.
+
+Gap candidates — scan the plan for these potential problems:
 - **Unresolved open questions** — every entry in the plan's `## Open Questions` section, plus any
   inline `TBD` / `TODO` / "decide later" markers. Treat each as a candidate to **resolve**, not
   merely to flag: most open questions a plan raises are answerable from the codebase itself — an
@@ -70,8 +84,13 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
    - Are the interfaces, types, and function signatures as the plan describes?
    - Does the proposed change actually conflict with existing code, or does it fit cleanly?
    - Is the "missing step" truly missing, or is it handled implicitly by existing code or tooling?
-   - Is the "over-engineering" concern valid, or does the complexity serve a real need evident in the codebase?
+   - Is the "over-engineering" concern valid — does the complexity serve a real need evident in
+     the codebase, or is it generalization the goal never asks for?
    - Are there existing patterns or utilities the plan overlooks that would simplify or invalidate a step?
+   - For excess candidates: confirm the passage restates or defends rather than instructs —
+     deleting it must remove no implementation step, no ordering constraint, and no recorded
+     decision. Confirmed means naming exactly the lines or section to delete. For a work item
+     (file, step, test), confirmed means the goal is still met without it.
    - For test-cost candidates: read the repo's existing tests for this area — is there already a
      cheaper seam (a fake, in-memory adapter, or unit-test fixture pattern) the plan overlooks?
      Ask what the cheap test could not catch, and confirm only when the plan's expensive test
@@ -99,7 +118,8 @@ Launch all agents in a single message so they run concurrently. Collect all resu
 Classify each confirmed issue by severity:
 
 - **substantive** — a real design flaw, ambiguity, or correctness/ordering/breakage problem that
-  should be fixed
+  should be fixed, **or** verified excess whose fix is deleting a work item or a section-scale
+  block of prose
 - **trivial** — wording, formatting, optional polish, or nitpick
 
 Output a concise list of **confirmed issues only**. For each, report:
@@ -118,11 +138,19 @@ it in its own category labeled `needs user decision` (with `section` and why the
 settle it) — it carries no severity, is never a fixable issue, and stays in `## Open Questions`
 for the user.
 
+A confirmed issue whose only fix **introduces new design surface** — a new name, sentinel,
+mechanism, or convention the plan does not already contain, as opposed to correcting the plan to
+match the codebase or the goal — is still reported as confirmed, but its `fix` is prefixed with
+`requires user judgment:` so an autonomous caller surfaces it for the user instead of applying it.
+Correcting the plan to match what the codebase already does is never "new design surface"; naming
+something the codebase has no name for is.
+
 At the end, note how many candidates were dismissed as false positives (no need to list them individually unless the user asks).
 
 This structured format is the skill's output contract: callers that run Phases 1–4
-programmatically (e.g. `design-review-loop`) consume these fields and the `needs user decision`
-category as-is — keep the field names and severity definitions stable.
+programmatically (e.g. `design-review-loop`) consume these fields, the `needs user decision`
+category, and the `requires user judgment:` fix prefix as-is — keep the field names, severity
+definitions, and that prefix stable.
 
 ### Phase 5: Act on results
 
@@ -131,4 +159,6 @@ confirmed issue — severity, summary, section, why, and suggested fix, plus any
 decision` questions — and only then ask whether they want the fixes applied. Never ask before the
 report is on screen, and never bury the issue list inside the question itself.
 
-If yes, apply fixes directly in the plan file for all confirmed issues. For each fix, explain what you're changing and why before editing.
+If yes, apply fixes directly in the plan file for all confirmed issues except those whose fix is
+prefixed `requires user judgment:` — ask about each of those individually, or leave it to the
+user. For each fix, explain what you're changing and why before editing.

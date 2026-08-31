@@ -86,7 +86,14 @@ Each step should reference specific files to modify or create.
 Quick reference list of files that will be touched.
 
 ## Trade-offs
-What alternatives were considered and why this approach was chosen.
+What alternatives were considered and why this approach was chosen — the comparison made at
+authoring time.
+
+## Decisions
+One line per outcome settled after authoring — a review finding accepted, a user call, or an
+accepted risk — never a restatement of a Trade-offs entry. The record that stops a settled
+question from being re-argued later. Add a line here instead of writing a paragraph of defense
+into the section the decision touches.
 
 ## Documentation
 Which project documentation pages need to be created or updated.
@@ -115,6 +122,9 @@ After writing the file, output:
 - Look at existing plans in `tasks/` and `tasks/completed/` to match the project's level of detail
 - Prefer reusing existing patterns over inventing new ones
 - Don't over-specify implementation details that are obvious from context
+- Say each thing once: state a rationale in the section that owns it, not again in every section
+  that touches it. A plan carrying what the goal doesn't need is as defective as one missing what
+  it does
 - Keep in mind the open/closed principle
 - Keep in mind the DRY principle
 - DO NOT write any implementation code — only the plan document and, when Phase 4 applies, standalone HTML mockups
