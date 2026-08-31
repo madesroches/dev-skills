@@ -118,9 +118,12 @@ Partition the confirmed issues into `substantive` and `trivial`.
 
 Before applying the stop conditions, compare this round's issues against `deferred` (match by
 summary/location, as for non-convergence). A re-report of a deferred trivial keeps its
-**trivial** classification for stop-condition purposes regardless of the severity this round's
-fresh reviewer assigned — reclassification by a reviewer who never saw the deferral is noise, not
-escalation.
+**trivial** classification for the rest of this round, not just for the stop conditions below:
+it is excluded from the substantive issues handed to this round's Phase 3 fixer, it is
+re-appended to `deferred` with this round's other trivial issues, and — if this round turns out
+to be the last one — it is counted among "its trivial issues" when Phase 5 gathers leftovers.
+This holds regardless of the severity this round's fresh reviewer assigned — reclassification by
+a reviewer who never saw the deferral is noise, not escalation.
 
 Stop the loop and go to **Phase 5** if any of these hold:
 
