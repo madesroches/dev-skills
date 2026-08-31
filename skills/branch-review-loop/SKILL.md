@@ -115,6 +115,12 @@ Collect the reviewer's structured result.
 
 Partition the confirmed issues into `substantive` and `trivial`.
 
+Before applying the stop conditions, compare this round's issues against trivial issues deferred
+in earlier rounds (match by summary/location, as for non-convergence). A re-report of a deferred
+trivial keeps its **trivial** classification for stop-condition purposes regardless of the
+severity this round's fresh reviewer assigned — reclassification by a reviewer who never saw the
+deferral is noise, not escalation.
+
 Stop the loop and go to **Phase 5** if any of these hold:
 
 - **Clean:** there are no confirmed issues (`NO ISSUES`).
@@ -125,8 +131,10 @@ Stop the loop and go to **Phase 5** if any of these hold:
 - **Non-convergence:** the set of substantive issues this round is essentially the same as a
   previous round's (compare against `history` by summary/location). This means the fixer failed to
   resolve them or keeps reintroducing them — looping again will not help.
-- **Oscillation:** issue counts are not trending down across rounds (e.g. round N has as many or
-  more substantive issues than round N-1, and they are not net-new follow-ons from a fix).
+- **Oscillation / accretion:** substantive counts have failed to decline for **two consecutive
+  rounds** — whether or not the issues are net-new. One round of net-new follow-ons after a fix
+  is normal; two is the signature of a loop manufacturing its own review surface, where each fix
+  enlarges the diff and the enlargement is the next round's finding.
 
 Otherwise, record this round's substantive issue summaries in `history` and continue to Phase 3.
 
@@ -183,8 +191,9 @@ Gather everything the loop did not resolve, from the **last** review round only 
 issues were either fixed or re-reported by the next reviewer):
 
 - Its trivial issues — never fixed inside the loop, by design.
-- If the loop stopped on round cap, non-convergence, or oscillation: its unresolved substantive
-  issues too.
+- If the loop stopped on round cap, non-convergence, or oscillation/accretion: its unresolved
+  substantive issues too — the newest crop of real findings, not the least consequential
+  leftovers.
 
 If there is nothing left (the loop stopped clean with zero confirmed issues), skip this phase
 entirely — there is nothing to finalize or commit.
@@ -214,9 +223,12 @@ summary rather than being silently dropped.
 
 When the loop and the finalize pass are done, output a concise report:
 
-- **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap / non-convergence / oscillation).
+- **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap /
+  non-convergence / oscillation-accretion).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
-- **Finalize pass** — what it cleared, or that there was nothing left to finalize.
+- **Finalize pass** — what it cleared, or that there was nothing left to finalize. If it was
+  handed unresolved *substantive* issues (an accretion, cap, or non-convergence stop), say so
+  plainly — those were real findings closed by an unreviewed pass.
 - **Remaining issues** — anything the finalize agent left unfixed, so the user can decide what to
   do next.
 - **Commits** — the per-round fix commits and the finalize commit (short SHA + subject line), so
@@ -232,10 +244,13 @@ whatever survives is reported, not looped on again.
   loop work; if you ever find yourself summarizing earlier findings into the reviewer prompt, stop.
 - The orchestrator never edits code or runs the review itself — delegating both keeps its own context
   from accumulating round-over-round bias and keeps roles auditable via the per-round commits.
-- The Phase 5 finalize pass is deliberately unreviewed. Re-reviewing it would restart the loop over
-  changes that are, by construction, the least consequential ones left. If it introduces a new
-  problem, that's the accepted cost of never handing back a branch with known open issues —
-  callers get that guarantee from this skill and should not re-implement it.
+- The Phase 5 finalize pass is deliberately unreviewed. Re-reviewing it would restart the loop
+  over changes that are usually the least consequential ones left — trivials the loop skipped. On
+  a cap, non-convergence, or accretion stop that is *not* true: the pass gets the last round's
+  unresolved substantive issues, which is why Phase 6 must name them explicitly rather than
+  filing them under routine cleanup. Either way it runs, and whatever it introduces is the
+  accepted cost of never handing back a branch with known open issues — callers get that
+  guarantee from this skill and should not re-implement it.
 - This skill builds directly on `branch-review`; if that skill's process changes, this loop inherits
   the change because the reviewer agent is told to follow the `branch-review` SKILL.md at its
   resolved absolute path (`<review skill path>`). The issue fields and severity definitions come
@@ -243,3 +258,9 @@ whatever survives is reported, not looped on again.
 - `branch-review-loop` and `design-review-loop` are deliberate near-mirrors. When changing shared
   loop mechanics here (preflight, stop conditions, commit protocol, reviewer/fixer roles, model
   overrides), make the same change in the sibling skill — history shows they drift otherwise.
+- `design-review-loop` has two mechanics this skill **deliberately lacks**: a growth stop
+  condition and the plan-size bookkeeping behind it. A plan's own bookkeeping turns every
+  addition into a fresh consistency obligation a later reviewer finds violated, so plan review
+  accretes; diff size is not the analogous signal for code, where fixes are checked by tests
+  rather than by whether other sections re-enumerate them. The oscillation/accretion rule *is*
+  shared.

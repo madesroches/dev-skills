@@ -166,10 +166,13 @@ an instruction to use a round cap of **10** instead of its own default of 5 (e.g
 use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
 is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
 committing after each fix round, terminates on its own (clean / nothing fixable / round cap /
-non-convergence), and then clears whatever it left unresolved in its own finalize pass. Note its
-reported outcome for the final summary, then continue regardless — anything its finalize pass left
-unfixed, plus any `needs user decision` open questions, is carried forward, not stopped on: the
-implementation stage and its review pass can still surface what matters.
+non-convergence / oscillation-accretion / growth), and then clears whatever it left unresolved in
+its own finalize pass. Note its reported outcome for the final summary — including the plan-size
+trajectory it reports, since a growth or accretion stop means the plan was inflating rather than
+converging — then continue regardless. Anything its finalize pass left unfixed, plus any
+`needs user decision` open questions and any fixes it flagged as `requires user judgment`, is
+carried forward, not stopped on: the implementation stage and its review pass can still surface
+what matters.
 
 ### Phase 3: Implement and independently review
 
@@ -199,8 +202,9 @@ and all commits are intact; the user (or a follow-up run) can fix and re-run `/p
 Report the whole chain concisely:
 - The issue (number + title) and the branch it was shipped on.
 - The plan file path and its commit.
-- `design-review-loop`'s outcome (converged, or which stopping condition fired), what its finalize
-  pass cleared, and any open questions it left for the user.
+- `design-review-loop`'s outcome (converged, or which stopping condition fired), the plan-size
+  trajectory it reported, what its finalize pass cleared, and anything it left for the user —
+  both `needs user decision` open questions and fixes it flagged `requires user judgment`.
 - `implement-and-review`'s outcome (implementer commit, review-loop convergence status, the loop's
   finalize commit — or the blocker it stopped on).
 - The PR URL, or the phase at which the chain stopped and why.

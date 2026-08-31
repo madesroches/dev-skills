@@ -97,7 +97,7 @@ this skill's Phase 0), an instruction to use a round cap of 10, and an instructi
 for the reviewer (e.g. `<base> — use opus for the reviewer and a round cap of 10`). It runs its
 whole process autonomously — including its own baseline-commit check, which will find nothing to
 do since the tree is already clean after Phase 1's commit — committing after each fix round,
-terminating on its own (clean / only trivial / round cap / non-convergence / oscillation), and
+terminating on its own (clean / only trivial / round cap / non-convergence / oscillation-accretion), and
 then running its own finalize pass over whatever it left unresolved.
 
 Record which stopping condition ended the loop, plus what its finalize pass cleared and anything
@@ -112,8 +112,8 @@ Report:
 - The implementer's commit (SHA + one-line description) and any checks it ran.
 - The review loop's outcome: rounds run, per-round fix commits, and the **convergence
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
-  stopped with only trivial issues remaining, or stopped on non-convergence/oscillation with
-  issues still outstanding at that point).
+  stopped with only trivial issues remaining, or stopped on non-convergence or
+  oscillation/accretion with issues still outstanding at that point).
 - Its finalize pass: the commit it made (SHA + what it fixed), or that nothing was left to
   finalize — and any issue it reported as deliberately left unfixed.
 

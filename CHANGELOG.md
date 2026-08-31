@@ -2,6 +2,37 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.20.0] - 2026-08-31
+
+Fixes an overdesign tendency in plan review: across observed runs every review-driven commit grew
+the plan and only hand edits ever shrank it, because the reviewer's categories were all gap-shaped,
+the fixer's only compliant move was insertion, and the loop's stop conditions specifically exempted
+net-new findings.
+
+- `design-review` now scans in **two directions**: once for gaps, once for excess (rationale argued
+  twice, defenses of uncontested decisions, justification far longer than the instruction it
+  supports, work items the goal doesn't require). A finding whose fix is a deletion is a finding,
+  verified by confirming the passage removes no step, ordering constraint, or recorded decision
+- Verified excess is **substantive**, not trivial, when the fix deletes a work item or a
+  section-scale block of prose — so the loop fixes it in-round instead of deferring it
+- A `## Decisions` section (one line per settled choice, accepted risk, or declined alternative) is
+  now a recognized plan convention: `design` writes it into the plan template, `design-review`
+  treats its entries as settled, and the loop's fixer records "user decided X / risk Y accepted" as
+  one line there instead of a defensive paragraph aimed at the next stateless reviewer
+- A confirmed issue whose only fix **introduces new design surface** (a new name, sentinel,
+  mechanism, or convention) is reported with its fix prefixed `requires user judgment:`; the loop
+  surfaces it for the user instead of autonomously applying a taste decision
+- `design-review-loop` tracks the plan's baseline line count and each round's net delta, reports
+  the trajectory every run, and stops on **growth** — monotonic growth past a 10% budget (a default
+  the caller can override, like the round cap)
+- The oscillation stop condition no longer exempts net-new findings: it fires when substantive
+  counts fail to decline for **two consecutive rounds**, the signature of a loop manufacturing its
+  own review surface. Mirrored in `branch-review-loop`
+- Both loops reconcile re-reported trivials against their own deferral ledger, so a fresh
+  reviewer's reclassification can't inflate the substantive count the stop conditions key on
+- Both loops' fixers are told to delete when the fix is a deletion, and both now report plainly
+  when the finalize pass was handed unresolved *substantive* issues rather than routine leftovers
+
 ## [1.19.0] - 2026-08-26
 
 - `pr` now moves a plan's associated `tasks/<slug>_mockups/` folder to `tasks/completed/` alongside the plan file, instead of leaving it behind in `tasks/`
