@@ -2,6 +2,37 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.21.0] - 2026-09-02
+
+Adds a verification-tier convention so plans stop defaulting to live-DB integration tests for logic
+a unit test covers, and so the code reviewer stops re-adding those tests after a plan declines them.
+
+- `design`'s plan template gains a `## Manual Verification` section — ordered steps with the exact
+  command and expected result — for checks worth running by hand but not worth maintaining as tests
+- A **strict tier rule** in `design`'s guidelines governs what goes where: anything a unit test can
+  cover gets a unit test (any behavior reachable by calling code with constructed inputs — tedium
+  is never a reason to route it to a manual step); past that, a manual step when breakage is
+  immediately visible, and an automated test when the failure would be **silent** (data corruption,
+  auth/permissions, money, migrations, concurrency)
+- A **bug seen in the wild** earns an automated regression test at whatever tier reproduces it —
+  live DB or container included. Both reviewers' test-cost categories exempt such a test, so a
+  regression test can no longer be deleted as "not earning its cost" or stepped down to a tier that
+  no longer reproduces the bug
+- `design-review` treats `## Manual Verification` entries as settled the way it treats
+  `## Decisions` — settled on cost, not on tier. It no longer raises "no integration coverage"
+  against behavior an entry covers, but gains two categories for entries that are in the wrong
+  tier: one a unit test should own, and one whose failure would be silent
+- `branch-review` now reads the branch's plan file (Phase 1) and scopes "new code without tests"
+  around its `## Manual Verification` entries. This was the leak: the review loop would re-add the
+  exact tests a plan had declined, round after round. Entries stay reviewable — flagged when the
+  diff has moved past the command, when a unit test could reach the behavior, or when the failure
+  would be silent
+- `implement-and-review`'s implementer runs the plan's manual steps once (non-interactive ones
+  only), reports their real output, and fixes mismatches before committing — explicitly without
+  converting them into automated tests
+- `/pr` copies `## Manual Verification` verbatim into the PR's `## Test plan`, so a reviewer can
+  re-run the manual checks from the PR body
+
 ## [1.20.0] - 2026-08-31
 
 Fixes an overdesign tendency in plan review: across observed runs every review-driven commit grew

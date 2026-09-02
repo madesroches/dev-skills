@@ -22,6 +22,11 @@ These skills establish a lightweight workflow convention:
 - **`tasks/`** — active design plans
 - **`tasks/completed/`** — plans that have been implemented
 - **`CHANGELOG.md`** — the `/pr` skill updates the unreleased section
+- **Verification tiers** — a plan's `## Testing Strategy` covers everything a unit test can reach
+  (which is the default for anything callable with constructed inputs) plus regression tests for
+  bugs seen in the wild; its `## Manual Verification` section holds the runnable-by-hand checks
+  that aren't worth maintaining as tests. The review skills treat that section as a recorded
+  decision rather than a coverage gap, and `/pr` copies it into the PR's test plan
 
 ## How the skills compose
 

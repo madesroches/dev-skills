@@ -33,6 +33,11 @@ decision unless the codebase makes it factually wrong. Inline prose that defends
 paragraph length is itself an excess candidate — the fix is a one-line entry in `## Decisions`
 replacing the paragraph.
 
+A `## Manual Verification` section is likewise a recorded decision — not to automate a check whose
+maintenance cost the plan judged higher than its value. Do not raise "no tests" or "no integration
+coverage" against behavior an entry there covers. It is settled on **cost**, not on **tier**: the
+two manual-verification categories below still apply to every entry.
+
 Gap candidates — scan the plan for these potential problems:
 - **Unresolved open questions** — every entry in the plan's `## Open Questions` section, plus any
   inline `TBD` / `TODO` / "decide later" markers. Treat each as a candidate to **resolve**, not
@@ -57,7 +62,15 @@ Gap candidates — scan the plan for these potential problems:
   candidate: a live-DB, real-service, network, or container-backed test for logic a unit test
   would cover fully; an end-to-end test standing in for a cheap assertion on a pure function; a
   test plan that duplicates coverage the existing suite already has; new heavyweight fixtures or
-  harnesses for a change that doesn't touch the dependency they exist to exercise
+  harnesses for a change that doesn't touch the dependency they exist to exercise. A test that
+  pins a bug seen in the wild is **exempt**, down to the tier that actually reproduces that bug
+- **A manual check a unit test should cover** — any `## Manual Verification` entry whose behavior
+  is reachable by calling code with constructed inputs (logic, branches, edge cases, error paths,
+  parsing, formatting). Unit tests are the cheap tier, so tedium is never a reason to leave such a
+  check manual. Treat every entry as a candidate on this one axis
+- **A manual check whose failure is silent** — any `## Manual Verification` entry covering data
+  corruption, auth/permissions, money, migrations, or concurrency. These need an automated test
+  however easily they are checked by hand, since nobody notices the breakage by running the thing
 - **Performance concerns** — N+1 queries, unnecessary re-renders, unbounded data structures
 - **New dependencies** — every third-party package, library, or tool the plan proposes adding. Treat
   each as a candidate to scrutinize on two axes: **value** (does it earn its place, or could existing
@@ -96,8 +109,18 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
      Ask what the cheap test could not catch, and confirm only when the plan's expensive test
      buys nothing the cheap one wouldn't; name the cheaper test that should replace it. Dismiss
      it when the real dependency (schema, migration, driver, wire format, transaction semantics)
-     is itself what needs verifying, or when no cheaper seam exists and building one would cost
-     more than the test saves.
+     is itself what needs verifying, when the test pins a bug the project actually hit in the wild
+     (check the plan, the issue it links, and `git log` for the fix — a regression test for a bug
+     that really occurred earns its cost, and stepping it down to a tier that no longer reproduces
+     the bug is not a cheaper test but a dead one), or when no cheaper seam exists and building one
+     would cost more than the test saves.
+   - For manual-verification candidates: could a unit test reach this behavior — is it callable
+     with constructed inputs, or does it need real wiring, a real dependency, or human judgment?
+     Confirm when a unit test would cover it (name the test that should replace the entry), when
+     the failure would be silent, or when the entry's command, flag, or subcommand exists neither
+     in the code nor anywhere in the plan's implementation steps. Dismiss it when the behavior is
+     genuinely out of a unit test's reach and its breakage would be immediately visible to the
+     next person who runs the command.
    - For documentation candidates: does a relevant doc file exist? Does it cover the area being changed? Would it become inaccurate if the plan were implemented as written?
    - For new-dependency candidates: confirm the package is actually new (not already a
      direct or transitive dependency). Weigh whether it brings enough value to justify the added
