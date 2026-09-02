@@ -71,6 +71,13 @@ Spawn one implementer agent with `model: "sonnet"`:
 > partial or stubbed work. If the project has fast, relevant checks (lint/tests for the
 > touched areas), run them and fix any failures before committing.
 >
+> If the plan has a `## Manual Verification` section, run each step whose command is
+> non-interactive and terminates on its own — skip anything needing a long-running server, a live
+> external service, credentials you don't have, or human input, and say which you skipped and why.
+> Report each command you ran with its actual output. If a step's result doesn't match the plan's
+> expected result, fix the code before committing. **Do not convert these steps into automated
+> tests** — the plan already decided they aren't worth maintaining as tests.
+>
 > When implementation is complete:
 > 1. Compose a commit message: a concise subject (≤ 72 chars) summarizing the change, and a
 >    body with one bullet per notable change. Write it to `<impl commit msg path>` with the
@@ -83,8 +90,8 @@ Spawn one implementer agent with `model: "sonnet"`:
 >    author identity.** The commit must read as if written entirely by the repository's normal
 >    author.
 >
-> Return: the commit SHA, a one-line description of what you implemented, and the results of
-> any checks you ran.
+> Return: the commit SHA, a one-line description of what you implemented, the results of any
+> checks you ran, and the manual-verification steps you ran (with their output) or skipped.
 
 If the agent reports it could not complete the plan (blocked, ambiguous, or failing checks it
 couldn't resolve), stop here and report the blocker to the user instead of proceeding to review.
@@ -110,6 +117,8 @@ it actually was.
 
 Report:
 - The implementer's commit (SHA + one-line description) and any checks it ran.
+- The manual-verification steps the implementer ran (with their results), and any it skipped
+  (with the reason).
 - The review loop's outcome: rounds run, per-round fix commits, and the **convergence
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
   stopped with only trivial issues remaining, or stopped on non-convergence or
@@ -120,8 +129,9 @@ Report:
 ## Notes
 
 - Keep the implementer and reviewer roles separate — the implementer never reviews its own
-  work, and the reviewer never sees the plan, only the resulting diff. This mirrors why
-  `branch-review-loop` always starts its reviewer from a blank context.
+  work, and the reviewer starts each round from a blank context with no memory of prior rounds'
+  findings, though it does read the branch's plan file for recorded verification decisions. This
+  mirrors why `branch-review-loop` always starts its reviewer from a blank context.
 - This skill builds directly on `branch-review-loop`; if that skill's process changes, this
   skill inherits the change because Phase 2 above invokes it directly via the `Skill` tool
   rather than restating its logic.

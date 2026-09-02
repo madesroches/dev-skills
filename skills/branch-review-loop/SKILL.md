@@ -27,7 +27,8 @@ but only if the reviewer starts cold.
 **The reviewer must begin from a blank context every round.** If it carried over the previous
 round's findings, it would anchor on already-fixed issues and miss what the edits newly exposed.
 Spawning a brand-new `Task` agent each round guarantees this: the agent sees only the diff as it
-stands now, with no memory of prior rounds. The orchestrator (this skill) keeps the cross-round
+stands now — plus the branch's plan file, if one exists, for recorded verification decisions —
+with no memory of prior rounds' findings. The orchestrator (this skill) keeps the cross-round
 bookkeeping; the reviewer never sees it.
 
 ## Roles

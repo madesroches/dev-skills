@@ -99,7 +99,14 @@ into the section the decision touches.
 Which project documentation pages need to be created or updated.
 
 ## Testing Strategy
-How to verify the implementation works.
+How the implementation is verified. List the automated coverage, following the verification-tier
+rule in Guidelines; for any check that needs a live DB, real service, network, or container, add
+one clause on what it catches that a unit test against a fake could not.
+
+## Manual Verification
+Only if some behavior no unit test can reach is better checked by hand than automated. Ordered
+steps, each with the exact command to run and the expected result, plus one clause on why the
+check isn't automated.
 
 ## Open Questions
 Anything that needs clarification before implementation.
@@ -125,6 +132,20 @@ After writing the file, output:
 - Say each thing once: state a rationale in the section that owns it, not again in every section
   that touches it. A plan carrying what the goal doesn't need is as defective as one missing what
   it does
+- Verification tiers, in strict order — **anything a unit test can cover gets a unit test.** That
+  means any behavior reachable by calling code with constructed inputs: logic, branches, edge
+  cases, error paths, parsing, formatting. Never route such a check to `## Manual Verification`
+  because writing the test is tedious or because the feature happens to be easy to try by hand.
+  Reach past unit tests only for what they genuinely cannot reach — wiring and end-to-end
+  plumbing, a real dependency's own behavior, output a human has to eyeball. There, prefer a
+  manual step when breakage would be immediately obvious the next time anyone runs the thing, and
+  an automated test when the failure would be **silent** (data corruption, auth/permissions,
+  money, migrations, concurrency) however easy the check is by hand
+- A **bug that actually happened in the wild** is the clearest case for paying full price: pin it
+  with an automated regression test at whatever tier genuinely reproduces it — live DB, real
+  service, or container included — and name the bug it pins. That class of bug has already proved
+  it recurs, which is exactly what the tier rule's cost/benefit is measuring; never leave it to a
+  manual step, and never step the test down to a tier that no longer reproduces it
 - Keep in mind the open/closed principle
 - Keep in mind the DRY principle
 - DO NOT write any implementation code — only the plan document and, when Phase 4 applies, standalone HTML mockups

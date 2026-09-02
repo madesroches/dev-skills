@@ -82,7 +82,10 @@ Update `CHANGELOG.md` with the changes from this branch.
    - Body must include:
      - `## Summary` — bullet points describing what changed and why
      - `Closes #<issue>` or `Fixes #<issue>` to link the originating issue (use `Closes` for features, `Fixes` for bugs)
-     - `## Test plan` — how to verify the changes work
+     - `## Test plan` — how to verify the changes work. If the plan file has a
+       `## Manual Verification` section, copy its steps in verbatim (commands and expected
+       results) alongside the automated coverage, so a reviewer can re-run the manual checks
+       straight from the PR body
      - If a plan file was moved to completed, mention it: "Design plan: `tasks/completed/<file>`"
 
 3. Create the PR. Write the body to a scratch file first — do **not** pass it inline (via
