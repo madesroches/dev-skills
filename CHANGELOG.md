@@ -20,16 +20,20 @@ a unit test covers, and so the code reviewer stops re-adding those tests after a
   no longer reproduces the bug
 - `design-review` treats `## Manual Verification` entries as settled the way it treats
   `## Decisions` — settled on cost, not on tier. It no longer raises "no integration coverage"
-  against behavior an entry covers, but gains two categories for entries that are in the wrong
-  tier: one a unit test should own, and one whose failure would be silent
-- `branch-review` now reads the branch's plan file (Phase 1) and scopes "new code without tests"
-  around its `## Manual Verification` entries. This was the leak: the review loop would re-add the
+  against behavior an entry covers, but gains categories for entries in the wrong tier — one a
+  unit test should own, one whose failure would be silent — and for a stale entry whose command,
+  flag, or subcommand appears in neither the code nor the plan's implementation steps
+- `branch-review` now reads the branch's plan file (Phase 1) — from the branch diff, or by
+  matching the branch name against `tasks/`/`tasks/completed/` when the plan was committed before
+  the branch point — and scopes "new code without tests" around its `## Manual Verification`
+  entries. This was the leak: the review loop would re-add the
   exact tests a plan had declined, round after round. Entries stay reviewable — flagged when the
   diff has moved past the command, when a unit test could reach the behavior, or when the failure
   would be silent
 - `implement-and-review`'s implementer runs the plan's manual steps once (non-interactive ones
   only), reports their real output, and fixes mismatches before committing — explicitly without
-  converting them into automated tests
+  converting them into automated tests. Its summary names the steps it ran and the ones it
+  skipped, with the reason, so a skipped check isn't dropped silently in the autonomous chain
 - `/pr` copies `## Manual Verification` verbatim into the PR's `## Test plan`, so a reviewer can
   re-run the manual checks from the PR body
 
