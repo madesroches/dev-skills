@@ -19,9 +19,12 @@ fall back to `main` if no remote HEAD is configured).
 2. `git diff <base>...HEAD --stat` — file summary
 3. `git diff <base>...HEAD` — full diff (three-dot: diffs from the merge-base, so commits that
    landed on `<base>` after the branch point don't pollute the review)
-4. If the file summary includes a plan file under `tasks/` or `tasks/completed/`, read it — that is
-   this branch's plan. Its `## Manual Verification` section records which checks were deliberately
-   left unautomated, and Phase 2 treats that as settled
+4. Locate this branch's plan. If the file summary includes a plan file under `tasks/` or
+   `tasks/completed/`, that is it. Otherwise — the plan may have been committed on `<base>` before
+   the branch point, so it never shows up in the diff — get the current branch name
+   (`git symbolic-ref --short HEAD`) and look for a file in `tasks/` or `tasks/completed/` whose
+   slug matches it. Read whichever plan you find. Its `## Manual Verification` section records
+   which checks were deliberately left unautomated, and Phase 2 treats that as settled
 
 ### Phase 2: Identify candidate issues
 

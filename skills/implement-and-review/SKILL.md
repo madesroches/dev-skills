@@ -117,6 +117,8 @@ it actually was.
 
 Report:
 - The implementer's commit (SHA + one-line description) and any checks it ran.
+- The manual-verification steps the implementer ran (with their results), and any it skipped
+  (with the reason).
 - The review loop's outcome: rounds run, per-round fix commits, and the **convergence
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
   stopped with only trivial issues remaining, or stopped on non-convergence or
@@ -127,8 +129,9 @@ Report:
 ## Notes
 
 - Keep the implementer and reviewer roles separate — the implementer never reviews its own
-  work, and the reviewer never sees the plan, only the resulting diff. This mirrors why
-  `branch-review-loop` always starts its reviewer from a blank context.
+  work, and the reviewer starts each round from a blank context with no memory of prior rounds'
+  findings, though it does read the branch's plan file for recorded verification decisions. This
+  mirrors why `branch-review-loop` always starts its reviewer from a blank context.
 - This skill builds directly on `branch-review-loop`; if that skill's process changes, this
   skill inherits the change because Phase 2 above invokes it directly via the `Skill` tool
   rather than restating its logic.
