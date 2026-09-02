@@ -36,7 +36,7 @@ replacing the paragraph.
 A `## Manual Verification` section is likewise a recorded decision — not to automate a check whose
 maintenance cost the plan judged higher than its value. Do not raise "no tests" or "no integration
 coverage" against behavior an entry there covers. It is settled on **cost**, not on **tier**: the
-two manual-verification categories below still apply to every entry.
+manual-verification categories below still apply to every entry.
 
 Gap candidates — scan the plan for these potential problems:
 - **Unresolved open questions** — every entry in the plan's `## Open Questions` section, plus any
@@ -71,6 +71,9 @@ Gap candidates — scan the plan for these potential problems:
 - **A manual check whose failure is silent** — any `## Manual Verification` entry covering data
   corruption, auth/permissions, money, migrations, or concurrency. These need an automated test
   however easily they are checked by hand, since nobody notices the breakage by running the thing
+- **A manual check the plan has moved past** — any `## Manual Verification` entry whose command,
+  flag, or subcommand exists neither in the code nor anywhere in the plan's implementation steps.
+  Treat every entry as a candidate on this axis
 - **Performance concerns** — N+1 queries, unnecessary re-renders, unbounded data structures
 - **New dependencies** — every third-party package, library, or tool the plan proposes adding. Treat
   each as a candidate to scrutinize on two axes: **value** (does it earn its place, or could existing
