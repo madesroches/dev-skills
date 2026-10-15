@@ -109,6 +109,9 @@ never the findings or context from previous rounds.
 > puts in the `needs user decision` category, labeled as such — they must be reported so the loop
 > can surface them, but they are never fixed and never counted as a design flaw.
 >
+> Return your report exactly once, only after every verification agent has finished — they may run in the
+> background, so wait for each one's result. Never send a partial or interim report.
+>
 > If there are no confirmed issues and no `needs user decision` questions, return exactly `NO ISSUES`.
 
 Collect the reviewer's structured result.
