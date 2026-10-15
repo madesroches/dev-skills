@@ -109,6 +109,9 @@ the findings or context from previous rounds.
 > defines — `severity`, `summary`, `location`, `why`, `fix` for each, with severity classified by
 > that phase's definitions.
 >
+> Return your report exactly once, only after every verification agent has finished — they may run in the
+> background, so wait for each one's result. Never send a partial or interim report.
+>
 > If there are no confirmed issues, return exactly `NO ISSUES`.
 
 Collect the reviewer's structured result.

@@ -102,6 +102,8 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
 
 Launch all agents in a single message so they run concurrently. Collect all results before proceeding.
 
+Verifier agents may run in the background: launching one can return immediately, with its result arriving later as a notification. That is not a result. Do not write the Phase 4 output or end your turn until every verifier has returned a verdict; if any are still running, keep waiting rather than sending a provisional report. Your report is delivered exactly once, when it is complete.
+
 ### Phase 4: Report
 
 Classify each confirmed issue by severity:

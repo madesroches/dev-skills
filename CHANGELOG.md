@@ -2,6 +2,16 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.21.1] - 2026-10-15
+
+Fixes the reviewer sending its report twice.
+
+- `design-review` and `branch-review` Phase 3: verifier agents may run in the background, so the
+  reviewer must not write its Phase 4 output or end its turn until every verifier has returned
+- `design-review-loop` and `branch-review-loop` reviewer prompts: return the report exactly once,
+  only after all verification has finished, never a partial or interim one. Previously the first
+  (provisional) report could reach the loop before verification dropped false positives
+
 ## [1.21.0] - 2026-09-02
 
 Adds a verification-tier convention so plans stop defaulting to live-DB integration tests for logic
