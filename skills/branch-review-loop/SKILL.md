@@ -115,13 +115,13 @@ the findings or context from previous rounds.
 >
 > If there are no confirmed issues, the report is `FINAL REPORT` followed by `NO ISSUES` on the next line.
 
-Act only on a message whose first line is exactly `FINAL REPORT`, and only once the reviewer's completion
-notification has also arrived. Ignore every other message from the reviewer (`WAITING:` notes, drafts, interim
-lists) — the reviewer sends them while its verifiers run and they may contain unverified false positives. A
-`FINAL REPORT` arriving from an earlier round's reviewer is never mixed into the current round; note it in the
-final summary instead. Collect the reviewer's structured result from that one message. By completion time the
-verifiers have returned, so a message whose first line is `FINAL REPORT` modulo markdown emphasis, heading markup,
-and a trailing colon counts as the report. If the completion notification arrives with no such message, re-spawn one
+Act on the current reviewer's message whose first line is `FINAL REPORT` (markdown emphasis, heading markup, and
+a trailing colon are tolerated) as soon as it arrives — do not wait for the reviewer's completion notification,
+which may only be delivered much later and would stall the loop. Ignore every other message from the reviewer
+(`WAITING:` notes, drafts, interim lists) — the reviewer sends them while its verifiers run and they may contain
+unverified false positives. A `FINAL REPORT` arriving from an earlier round's reviewer is never mixed into the
+current round; note it in the final summary instead. Collect the reviewer's structured result from that one
+message. If the reviewer's completion notification arrives and it has sent no `FINAL REPORT`, re-spawn one
 fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 5 over the previous
 completed round's deferred trivial issues (if any), then Phase 6. In round 1, say plainly that no review
 completed; otherwise, say plainly that the last fix round went unreviewed.
