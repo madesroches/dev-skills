@@ -119,7 +119,11 @@ Act only on a message whose first line is exactly `FINAL REPORT`, and only once 
 notification has also arrived. Ignore every other message from the reviewer (`WAITING:` notes, drafts, interim
 lists) — the reviewer sends them while its verifiers run and they may contain unverified false positives. A
 `FINAL REPORT` arriving from an earlier round's reviewer is never mixed into the current round; note it in the
-final summary instead. Collect the reviewer's structured result from that one message.
+final summary instead. Collect the reviewer's structured result from that one message. By completion time the
+verifiers have returned, so a message whose first line is `FINAL REPORT` modulo markdown emphasis, heading markup,
+and a trailing colon counts as the report. If the completion notification arrives with no such message, re-spawn one
+fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop and report the failure
+in Phase 6.
 
 ### Phase 2: Decide whether to continue
 

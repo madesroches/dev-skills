@@ -10,6 +10,8 @@ reviewer can receive verifier verdicts only by ending its turn, and whatever it 
 - `design-review-loop` and `branch-review-loop`: the orchestrator now acts only on a reviewer message whose
   first line is exactly `FINAL REPORT` (after the reviewer's completion notification), ignores all other
   messages, and notes stray reports from earlier rounds in the final summary instead of mixing them in
+  and, if the reviewer completes without one, re-spawns a fresh reviewer once for the same round (then stops
+  and reports the failure); near-miss headers (emphasis, heading markup, trailing colon) count as the report
 - `design-review` and `branch-review` Phase 3, and the loop reviewer prompts: dropped "don't end your turn";
   while verifiers are pending the reviewer ends its turn with only `WAITING: <n> verifier(s) pending`
 
