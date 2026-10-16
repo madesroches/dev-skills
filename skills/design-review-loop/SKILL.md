@@ -123,7 +123,8 @@ unverified false positives. A `FINAL REPORT` arriving from an earlier round's re
 current round; note it in the final summary instead. Collect the reviewer's structured result from that one
 message. If the reviewer's completion notification arrives and it has sent no `FINAL REPORT`, re-spawn one
 fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 5 over the previous
-completed round's deferred trivial issues (if any), then Phase 6 — which still surfaces that round's
+completed round's trivial issues (if any), taken in full from its `FINAL REPORT` (`deferred` holds only
+summaries), then Phase 6 — which still surfaces that round's
 set-aside `needs user decision` questions and `requires user judgment` fixes, since they were never fixed. In round 1, say plainly that no review
 completed; otherwise, say plainly that the last fix round went unreviewed.
 
