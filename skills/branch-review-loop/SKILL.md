@@ -122,8 +122,9 @@ lists) — the reviewer sends them while its verifiers run and they may contain 
 final summary instead. Collect the reviewer's structured result from that one message. By completion time the
 verifiers have returned, so a message whose first line is `FINAL REPORT` modulo markdown emphasis, heading markup,
 and a trailing colon counts as the report. If the completion notification arrives with no such message, re-spawn one
-fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 6, skipping Phase 5
-(this round has no review result to finalize) and say plainly that the last fix round went unreviewed.
+fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 5 over the previous
+completed round's deferred trivial issues (if any), then Phase 6. In round 1, say plainly that no review
+completed; otherwise, say plainly that the last fix round went unreviewed.
 
 ### Phase 2: Decide whether to continue
 
@@ -206,8 +207,10 @@ prompt.
 
 ### Phase 5: Finalize — fix whatever the loop left behind
 
-Gather everything the loop did not resolve, from the **last** review round only (earlier rounds'
-issues were either fixed or re-reported by the next reviewer):
+Gather everything the loop did not resolve, from the **last completed** review round only (earlier
+rounds' issues were either fixed or re-reported by the next reviewer; on a reviewer-failure stop that
+is the round before the failed one, and only its trivial issues remain, since its substantive issues
+were fixed):
 
 - Its trivial issues — never fixed inside the loop, by design.
 - If the loop stopped on round cap, non-convergence, or oscillation/accretion: its unresolved
@@ -244,7 +247,7 @@ summary rather than being silently dropped.
 When the loop and the finalize pass are done, output a concise report:
 
 - **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap /
-  non-convergence / oscillation-accretion) / reviewer failure).
+  non-convergence / oscillation-accretion / reviewer failure).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Finalize pass** — what it cleared, or that there was nothing left to finalize. If it was
   handed unresolved *substantive* issues (an accretion, cap, or non-convergence stop), say so

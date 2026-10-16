@@ -123,7 +123,7 @@ Report:
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
   stopped with only trivial issues remaining, or stopped on non-convergence or
   oscillation/accretion with issues still outstanding at that point, or on reviewer failure, in which
-  case the last fix round went unreviewed and the finalize pass did not run).
+  case the last fix round went unreviewed, or no review completed if it failed in round 1).
 - Its finalize pass: the commit it made (SHA + what it fixed), or that nothing was left to
   finalize — and any issue it reported as deliberately left unfixed.
 
