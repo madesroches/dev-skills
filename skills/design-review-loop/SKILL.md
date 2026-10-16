@@ -228,7 +228,8 @@ Gather everything the loop did not resolve, from the **last completed** review r
 rounds' issues were either fixed or re-reported by the next reviewer; on a reviewer-failure stop that
 is the round before the failed one; its substantive issues were fixed, so only its trivial issues go to
 the finalize agent, while its set-aside `needs user decision` / `requires user judgment` items remain open
-for Phase 6):
+for Phase 6; those trivial issues predate that round's fix commit, so tell the finalize agent to re-locate
+each in the current file and skip any that no longer apply):
 
 - Its trivial issues — never fixed inside the loop, by design.
 - If the loop stopped on round cap, non-convergence, oscillation/accretion, or growth: its
