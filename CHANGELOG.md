@@ -14,7 +14,9 @@ reviewer can receive verifier verdicts only by ending its turn, and whatever it 
   from earlier rounds are noted in the final summary instead of being mixed in
 - `design-review-loop` and `branch-review-loop`: if a reviewer completes without a `FINAL REPORT`, a fresh
   reviewer is re-spawned once for the same round; a second failure stops the loop as **reviewer failure**,
-  which still runs the finalize pass over the last completed round's deferred trivial issues
+  which still runs the finalize pass over the last completed round's trivial issues (taken from its
+  `FINAL REPORT`) and makes the final summary say whether no review completed or the last fix round went
+  unreviewed
 - `design-review` and `branch-review` Phase 3, and the loop reviewer prompts: dropped "don't end your turn";
   while verifiers are pending the reviewer ends its turn with only `WAITING: <n> verifier(s) pending`
 
