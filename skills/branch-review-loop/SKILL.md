@@ -250,6 +250,8 @@ When the loop and the finalize pass are done, output a concise report:
 
 - **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap /
   non-convergence / oscillation-accretion / reviewer failure).
+  On reviewer failure, also state whether no review completed (round 1) or the last fix round
+  went unreviewed, and list any stray earlier-round `FINAL REPORT` that was set aside.
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Finalize pass** — what it cleared, or that there was nothing left to finalize. If it was
   handed unresolved *substantive* issues (an accretion, cap, or non-convergence stop), say so

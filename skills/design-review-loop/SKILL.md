@@ -274,6 +274,8 @@ When the loop and the finalize pass are done, output a concise report:
 
 - **Outcome** — which stopping condition ended the loop (clean / nothing fixable / round cap /
   non-convergence / oscillation-accretion / growth / reviewer failure).
+  On reviewer failure, also state whether no review completed (round 1) or the last fix round
+  went unreviewed, and list any stray earlier-round `FINAL REPORT` that was set aside.
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Plan size** — the baseline line count, each round's net delta, and the final count. Always
   report it, not only on a growth stop: it is the one signal that shows whether the loop
