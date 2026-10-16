@@ -2,6 +2,17 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.21.2] - 2026-10-15
+
+Fixes the 1.21.1 report-once fix, which could not be obeyed: agents only run in the background, so a
+reviewer can receive verifier verdicts only by ending its turn, and whatever it wrote then reached the loop.
+
+- `design-review-loop` and `branch-review-loop`: the orchestrator now acts only on a reviewer message whose
+  first line is exactly `FINAL REPORT` (after the reviewer's completion notification), ignores all other
+  messages, and notes stray reports from earlier rounds in the final summary instead of mixing them in
+- `design-review` and `branch-review` Phase 3, and the loop reviewer prompts: dropped "don't end your turn";
+  while verifiers are pending the reviewer ends its turn with only `WAITING: <n> verifier(s) pending`
+
 ## [1.21.1] - 2026-10-15
 
 Fixes the reviewer sending its report twice.

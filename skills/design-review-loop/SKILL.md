@@ -109,12 +109,17 @@ never the findings or context from previous rounds.
 > puts in the `needs user decision` category, labeled as such — they must be reported so the loop
 > can surface them, but they are never fixed and never counted as a design flaw.
 >
-> Return your report exactly once, only after every verification agent has finished — they may run in the
-> background, so wait for each one's result. Never send a partial or interim report.
+> Verification agents run in the background, so you will end your turn while they are pending; on those turns send only
+> `WAITING: <n> verifier(s) pending`, never findings. Your final report — and only that — must begin with the exact first line
+> `FINAL REPORT`, sent once, after every verification agent has returned.
 >
-> If there are no confirmed issues and no `needs user decision` questions, return exactly `NO ISSUES`.
+> If there are no confirmed issues and no `needs user decision` questions, the report is `FINAL REPORT` followed by `NO ISSUES` on the next line.
 
-Collect the reviewer's structured result.
+Act only on a message whose first line is exactly `FINAL REPORT`, and only once the reviewer's completion
+notification has also arrived. Ignore every other message from the reviewer (`WAITING:` notes, drafts, interim
+lists) — the reviewer sends them while its verifiers run and they may contain unverified false positives. A
+`FINAL REPORT` arriving from an earlier round's reviewer is never mixed into the current round; note it in the
+final summary instead. Collect the reviewer's structured result from that one message.
 
 ### Phase 2: Decide whether to continue
 
