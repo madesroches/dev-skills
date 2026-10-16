@@ -109,12 +109,24 @@ never the findings or context from previous rounds.
 > puts in the `needs user decision` category, labeled as such — they must be reported so the loop
 > can surface them, but they are never fixed and never counted as a design flaw.
 >
-> Return your report exactly once, only after every verification agent has finished — they may run in the
-> background, so wait for each one's result. Never send a partial or interim report.
+> Verification agents run in the background, so you will end your turn while they are pending; on those turns send only
+> `WAITING: <n> verifier(s) pending`, never findings. Your final report — and only that — must begin with the exact first line
+> `FINAL REPORT`, sent once, after every verification agent has returned.
 >
-> If there are no confirmed issues and no `needs user decision` questions, return exactly `NO ISSUES`.
+> If there are no confirmed issues and no `needs user decision` questions, the report is `FINAL REPORT` followed by `NO ISSUES` on the next line.
 
-Collect the reviewer's structured result.
+Act on the current reviewer's message whose first line is `FINAL REPORT` (markdown emphasis, heading markup, and
+a trailing colon are tolerated) as soon as it arrives — do not wait for the reviewer's completion notification,
+which may only be delivered much later and would stall the loop. Ignore every other message from the reviewer
+(`WAITING:` notes, drafts, interim lists) — the reviewer sends them while its verifiers run and they may contain
+unverified false positives. A `FINAL REPORT` arriving from an earlier round's reviewer is never mixed into the
+current round; note it in the final summary instead. Collect the reviewer's structured result from that one
+message. If the reviewer's completion notification arrives and it has sent no `FINAL REPORT`, re-spawn one
+fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 5 over the previous
+completed round's trivial issues (if any), taken in full from its `FINAL REPORT` (`deferred` holds only
+summaries), then Phase 6 — which still surfaces that round's
+set-aside `needs user decision` questions and `requires user judgment` fixes, since they were never fixed. In round 1, say plainly that no review
+completed; otherwise, say plainly that the last fix round went unreviewed.
 
 ### Phase 2: Decide whether to continue
 
@@ -213,8 +225,12 @@ prompt.
 
 ### Phase 5: Finalize — fix whatever the loop left behind
 
-Gather everything the loop did not resolve, from the **last** review round only (earlier rounds'
-issues were either fixed or re-reported by the next reviewer):
+Gather everything the loop did not resolve, from the **last completed** review round only (earlier
+rounds' issues were either fixed or re-reported by the next reviewer; on a reviewer-failure stop that
+is the round before the failed one; its substantive issues were fixed, so only its trivial issues go to
+the finalize agent, while its set-aside `needs user decision` / `requires user judgment` items remain open
+for Phase 6; those trivial issues predate that round's fix commit, so tell the finalize agent to re-locate
+each in the current file and skip any that no longer apply):
 
 - Its trivial issues — never fixed inside the loop, by design.
 - If the loop stopped on round cap, non-convergence, oscillation/accretion, or growth: its
@@ -257,7 +273,9 @@ summary rather than being silently dropped.
 When the loop and the finalize pass are done, output a concise report:
 
 - **Outcome** — which stopping condition ended the loop (clean / nothing fixable / round cap /
-  non-convergence / oscillation-accretion / growth).
+  non-convergence / oscillation-accretion / growth / reviewer failure).
+  On reviewer failure, also state whether no review completed (round 1) or the last fix round
+  went unreviewed, and list any stray earlier-round `FINAL REPORT` that was set aside.
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Plan size** — the baseline line count, each round's net delta, and the final count. Always
   report it, not only on a growth stop: it is the one signal that shows whether the loop

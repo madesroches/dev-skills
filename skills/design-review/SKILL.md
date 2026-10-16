@@ -139,7 +139,7 @@ Launch verification agents in parallel using the Task tool with `subagent_type: 
 
 Launch all agents in a single message so they run concurrently. Collect all results before proceeding.
 
-Verifier agents may run in the background: launching one can return immediately, with its result arriving later as a notification. That is not a result. Do not write the Phase 4 output or end your turn until every verifier has returned a verdict; if any are still running, keep waiting rather than sending a provisional report. Your report is delivered exactly once, when it is complete.
+Verifier agents run in the background: launching one returns immediately, and its verdict arrives later as a notification. That is not a result, and you cannot block on it — the only way to receive a verdict is to end your turn and be woken. So while any verifier is still pending, end your turn with only `WAITING: <n> verifier(s) pending` — no draft findings, no partial list. Write the Phase 4 output once, after every verdict is back.
 
 ### Phase 4: Report
 
