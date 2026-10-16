@@ -123,7 +123,8 @@ unverified false positives. A `FINAL REPORT` arriving from an earlier round's re
 current round; note it in the final summary instead. Collect the reviewer's structured result from that one
 message. If the reviewer's completion notification arrives and it has sent no `FINAL REPORT`, re-spawn one
 fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 5 over the previous
-completed round's deferred trivial issues (if any), then Phase 6. In round 1, say plainly that no review
+completed round's deferred trivial issues (if any), then Phase 6 — which still surfaces that round's
+set-aside `needs user decision` questions and `requires user judgment` fixes, since they were never fixed. In round 1, say plainly that no review
 completed; otherwise, say plainly that the last fix round went unreviewed.
 
 ### Phase 2: Decide whether to continue
@@ -225,8 +226,9 @@ prompt.
 
 Gather everything the loop did not resolve, from the **last completed** review round only (earlier
 rounds' issues were either fixed or re-reported by the next reviewer; on a reviewer-failure stop that
-is the round before the failed one, and only its trivial issues remain, since its substantive issues
-were fixed):
+is the round before the failed one; its substantive issues were fixed, so only its trivial issues go to
+the finalize agent, while its set-aside `needs user decision` / `requires user judgment` items remain open
+for Phase 6):
 
 - Its trivial issues — never fixed inside the loop, by design.
 - If the loop stopped on round cap, non-convergence, oscillation/accretion, or growth: its
