@@ -166,7 +166,7 @@ an instruction to use a round cap of **10** instead of its own default of 5 (e.g
 use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
 is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
 committing after each fix round, terminates on its own (clean / nothing fixable / round cap /
-non-convergence / oscillation-accretion / growth), and then clears whatever it left unresolved in
+non-convergence / oscillation-accretion / growth / reviewer failure), and then clears whatever it left unresolved in
 its own finalize pass. Note its reported outcome for the final summary — including the plan-size
 trajectory it reports, since a growth or accretion stop means the plan was inflating rather than
 converging — then continue regardless. Anything its finalize pass left unfixed, plus any

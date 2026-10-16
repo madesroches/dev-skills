@@ -122,8 +122,8 @@ lists) — the reviewer sends them while its verifiers run and they may contain 
 final summary instead. Collect the reviewer's structured result from that one message. By completion time the
 verifiers have returned, so a message whose first line is `FINAL REPORT` modulo markdown emphasis, heading markup,
 and a trailing colon counts as the report. If the completion notification arrives with no such message, re-spawn one
-fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop and report the failure
-in Phase 6.
+fresh reviewer for the same round (do not increment N); if that one also fails, stop the loop (**reviewer failure**): go to Phase 6, skipping Phase 5
+(this round has no review result to finalize) and say plainly that the last fix round went unreviewed.
 
 ### Phase 2: Decide whether to continue
 
@@ -244,7 +244,7 @@ summary rather than being silently dropped.
 When the loop and the finalize pass are done, output a concise report:
 
 - **Outcome** — which stopping condition ended the loop (clean / only trivial / round cap /
-  non-convergence / oscillation-accretion).
+  non-convergence / oscillation-accretion) / reviewer failure).
 - **Rounds run** — `N`, with a one-line note per round on what was found and fixed.
 - **Finalize pass** — what it cleared, or that there was nothing left to finalize. If it was
   handed unresolved *substantive* issues (an accretion, cap, or non-convergence stop), say so
