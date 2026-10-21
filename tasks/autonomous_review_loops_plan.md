@@ -45,8 +45,9 @@ Add three skills:
   - The plan has incomplete steps (line 50).
   - Auto-fixable lint failures (line 109).
 - `implement-and-review` and both loops only prompt on a dirty tree in preflight. In the
-  ship chain the tree is always clean when they start: preflight cleans it, and every stage
-  commits its own work.
+  ship chain the tree is clean when they start only if `ship-issue` Phase 1 step 4 stages
+  everything `design` wrote. Today it stages just the plan file, so a `tasks/<slug>_mockups/`
+  folder stays untracked and trips the prompt (Implementation Steps, `ship-issue`, fixes this).
 
 ## Design
 
@@ -105,8 +106,8 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    reverse the earlier edit.
    - When unsure, drop it. A skipped nit costs nothing; a flip-flop costs a commit and a review
      round.
-   - A ledgered item re-reported as substantive is still dropped. This carries over the existing
-     `deferred` rule: a fresh reviewer's reclassification is noise, not escalation.
+   - A ledgered item re-reported as substantive is still dropped, but recorded: keep its summary
+     and location/section for the final summary.
    - Count the dropped items per round for the summary.
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered location.
@@ -122,7 +123,8 @@ the invocation requests it, the overrides in that section apply. Default-mode te
 
    Trivials the finalize agent fixes aren't added to the ledger, since nothing reviews after it.
 7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion. Each
-   round's note adds how many trivials were fixed and how many ledgered trivials were skipped.
+   round's note adds how many trivials were fixed and how many ledgered trivials were skipped. It also lists each dropped item that was
+   re-reported as substantive, by summary and location/section.
 
 In the design loop, `needs user decision` questions and `requires user judgment:` fixes are set
 aside before the trivial partition, exactly as today. A trivial that carries that prefix is never
@@ -206,6 +208,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 4. `skills/pr/SKILL.md`: AFK-mode argument in Phase 1, the four defaults at their prompt sites (or
    one table that each site references), and the `Decisions taken (AFK mode):` output.
 5. `skills/ship-issue/SKILL.md`:
+   - Phase 1 step 4 (applies outside AFK mode too): when `design` produced
+     `tasks/<slug>_mockups/`, stage that folder by explicit path together with the plan.
    - Phase 0: AFK-mode argument.
    - Add a `## AFK mode` section with the six overrides.
    - Add `Task` to `allowed-tools`, for the decision pass.
@@ -257,7 +261,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 - **Stash vs. baseline commit for a dirty tree in AFK mode.** A baseline commit would carry
   unrelated WIP into the PR. A named stash keeps the WIP recoverable and out of the PR.
 - **No AFK mode for `implement-and-review` or the loops' preflight.** Their only prompt is the
-  dirty-tree check, and in the ship chain the tree is always clean when they start.
+  dirty-tree check, and in the ship chain the tree is clean when they start once Phase 1 step 4
+  stages the mockups folder with the plan.
 - **Decision pass vs. leaving open items to the implementer.** If the open items are left, the
   implementer still decides them, but invisibly. The pass makes those decisions explicit,
   committed, and listable at the cost of one agent call.
