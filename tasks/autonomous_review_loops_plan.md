@@ -37,14 +37,17 @@ Add three skills:
   - Its "hard requirement for the user's judgment" exception in **Autonomy**.
   - Indirectly, through `pr`'s questions (see the next bullet).
 
-  Its plan loop leaves `needs user decision` questions and `requires user judgment` fixes in the
-  plan for the user, so the implementer resolves them silently.
+  Its plan loop leaves `needs user decision` questions in the plan's `## Open Questions`, and
+  reports `requires user judgment` fixes (set aside unapplied) only in the loop's final summary,
+  so the implementer resolves them silently.
 - `skills/pr/SKILL.md` asks the user at four points:
   - No issue found (line 28).
   - No checks documented for a changed area (line 38).
   - The plan has incomplete steps (line 50).
   - Auto-fixable lint failures (line 109).
-- `implement-and-review` and both loops only prompt on a dirty tree in preflight. In the
+- `implement-and-review` and `branch-review-loop` prompt on a dirty tree in preflight, while
+  `design-review-loop` auto-commits a dirty plan file (its only prompt is for a missing plan
+  path). In the
   ship chain the tree is clean when they start only if `ship-issue` Phase 1 step 4 stages
   everything `design` wrote. Today it stages just the plan file, so a `tasks/<slug>_mockups/`
   folder stays untracked and trips the prompt (Implementation Steps, `ship-issue`, fixes this).
@@ -112,14 +115,17 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered location.
 5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
-   them **plus** the round's surviving trivials, in the same prompt. After the fixer returns, the
-   orchestrator appends every trivial it sent to `trivial_ledger`, with the fixer's report.
+   them **plus** the round's surviving trivials, in the same prompt. Phase 3's pre-fix printed
+   list includes the trivials being sent, and the fixer returns one line per issue it was given,
+   including any it declined. After the fixer returns, the orchestrator appends every trivial it
+   sent to `trivial_ledger`, with the fixer's line.
    Trivials alone never trigger a fix round; that's the *only trivial* stop.
 6. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
    - *Only trivial*: the last round's surviving (post-filter) trivials.
    - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
-   - *Reviewer failure*: the previous round's trivials were already fixed in-round, so there's
-     normally nothing left.
+   - *Reviewer failure*: skip Phase 5. This overrides Phase 1's reviewer-failure routing, which
+     sends the previous round's trivials to Phase 5; in this mode they are already in
+     `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes aren't added to the ledger, since nothing reviews after it.
 7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion. Each
@@ -205,7 +211,7 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    keep growth as a stop condition, and include the set-aside paragraph.
 3. `skills/implement-and-review/SKILL.md`: autonomous-mode pass-through in Phase 0, Phase 2, and
    Phase 3.
-4. `skills/pr/SKILL.md`: AFK-mode argument in Phase 1, the four defaults at their prompt sites (or
+4. `skills/pr/SKILL.md`: set `argument-hint` to `[AFK mode]`, AFK-mode argument in Phase 1, the four defaults at their prompt sites (or
    one table that each site references), and the `Decisions taken (AFK mode):` output.
 5. `skills/ship-issue/SKILL.md`:
    - Phase 1 step 4 (applies outside AFK mode too): when `design` produced
@@ -224,6 +230,7 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 8. `CLAUDE.md`:
    - Skill count (eight → eleven), the skill list, and three Architecture lines.
    - Extend the near-mirror bullet: autonomous mode is a shared loop mechanic.
+   - Extend the `/implement-and-review` bullet with the autonomous-mode pass-through.
    - Extend the `/ship-issue` bullet: AFK mode, the decision pass, and the wrappers holding no
      logic.
 9. `.claude-plugin/plugin.json`: bump the version to `1.22.0`. Update the shared description in
@@ -256,8 +263,6 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
   with nits, which feeds the growth stop, and it has no equivalent for code. With the ledger in
   the orchestrator, the stateless reviewer can keep re-reporting a settled nit harmlessly: the
   nit is filtered out, and trivials never keep the loop alive.
-- **Keeping non-convergence.** Without a cap, it's the only stop for a fixer that can't resolve a
-  finding. Dropping it would make "stuck" indistinguishable from "infinite".
 - **Stash vs. baseline commit for a dirty tree in AFK mode.** A baseline commit would carry
   unrelated WIP into the PR. A named stash keeps the WIP recoverable and out of the PR.
 - **No AFK mode for `implement-and-review` or the loops' preflight.** Their only prompt is the
@@ -266,8 +271,6 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 - **Decision pass vs. leaving open items to the implementer.** If the open items are left, the
   implementer still decides them, but invisibly. The pass makes those decisions explicit,
   committed, and listable at the cost of one agent call.
-
-## Decisions
 
 ## Documentation
 
