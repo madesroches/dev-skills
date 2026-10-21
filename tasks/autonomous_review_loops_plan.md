@@ -11,7 +11,7 @@ Add three skills:
   loop keeps a ledger of the trivial fixes it has already applied. It refuses to re-apply,
   refine, or reverse any of them, so a nit fixed in round 2 can't be flipped back in round 3.
 - `/ship-auto` is `/ship-issue` for a user who is assumed AFK (issue-only, matching `ship-issue`). It chains design → autonomous plan
-  loop → implementation → autonomous branch loop → PR. It never prompts: wherever a skill in the
+  loop → decision pass → implementation → autonomous branch loop → PR. It never prompts: wherever a skill in the
   chain would ask, it takes a recorded default instead. When it finishes (or hard-stops), it lists
   the most important decisions it took on the user's behalf.
 
@@ -95,7 +95,7 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    - *Clean* and *only trivial* (*nothing fixable*). The loop runs only while substantive issues
      exist, and trivials never extend it.
    - *Non-convergence*. A substantive set that matches an earlier round's means the next round
-     will repeat this one. Without a cap, this is the only guard against an endless loop.
+     will repeat this one. Without a cap, this is the only such guard in the branch loop (growth also guards the design loop).
    - *Growth* (design loop only). This is the plan-size guard the 1.20.0 convention requires. Its
      budget stays caller-overridable.
    - *Reviewer failure*, unchanged.
@@ -140,7 +140,9 @@ sent to the fixer, in either mode.
 
 Phase 0 accepts `autonomous mode`. When it's set, Phase 2 invokes `autonomous-branch-review-loop`
 instead of `branch-review-loop`, passing `<base> — use opus for the reviewer` (no round cap).
-Phase 3's convergence wording lists the stop conditions that the invoked loop can actually report.
+Phase 2's stop-condition list, Phase 3's convergence wording, and the Roles sentence that says the loop
+gets "a round cap of 10" are qualified to the stop conditions the invoked loop can actually report
+(no round cap, no oscillation-accretion) in this mode.
 
 ### `pr` — AFK mode
 
@@ -169,20 +171,20 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
      disabled. Instead, take the most conservative option, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
 2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place
-   of `design-review-loop` with a cap of 10.
+   of `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
+   the `— AFK mode` text stripped from its arguments.
 3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
    questions or `requires user judgment` fixes, or its finalize pass deliberately left issues
    unfixed because they needed a decision, spawn one `Task` agent (`general-purpose`,
    session model) with the plan path and those items. It must:
    - Resolve each one by choosing the most conservative option that still satisfies the issue.
      For a `requires user judgment` fix, that means applying or declining it.
-   - Record each resolution as one line in the plan's `## Decisions` section, prefixed `AFK:`,
+   - Record each resolution as one line in the plan's `## Decisions` section (create the section if the plan lacks one), prefixed `AFK:`,
      and remove each resolved question from `## Open Questions`.
    - Return the lines it wrote.
 
-   The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4. This settles
-   the choices before the implementer would otherwise make them silently, and makes them
-   listable.
+   The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
+   subject `Record AFK decisions for #<number>`.
 4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
 5. **PR.** Phase 4 passes `AFK mode` to `pr`.
 6. **Decisions report (Phase 5).** The final summary leads with a **Decisions taken** list. It
@@ -210,15 +212,18 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    - Notes: add one bullet saying autonomous mode is a shared mechanic and must stay mirrored.
 2. `skills/design-review-loop/SKILL.md`: the same three edits. Use section in place of location,
    keep growth as a stop condition, and include the set-aside paragraph.
-3. `skills/implement-and-review/SKILL.md`: autonomous-mode pass-through in Phase 0, Phase 2, and
-   Phase 3.
+3. `skills/implement-and-review/SKILL.md`: autonomous-mode pass-through in Phase 0, Phase 2 (including
+   its stop-condition list), Phase 3, and the Roles round-cap sentence.
 4. `skills/pr/SKILL.md`: set `argument-hint` to `[AFK mode]`, AFK-mode argument in Phase 1, the four defaults at their prompt sites (or
    one table that each site references), and the `Decisions taken (AFK mode):` output.
 5. `skills/ship-issue/SKILL.md`:
    - Phase 1 step 4 (applies outside AFK mode too): when `design` produced
      `tasks/<slug>_mockups/`, stage that folder by explicit path together with the plan.
    - Phase 0: AFK-mode argument.
-   - Add a `## AFK mode` section with the six overrides.
+   - Add a `## AFK mode` section with the six overrides. It states that it overrides the prose
+     saying the orchestrator only does preflight, one plan commit, and relaying (Roles, Notes: "the one
+     commit this skill makes", "no per-skill deviation"), and Phase 2's outcome list drops round cap
+     and oscillation-accretion.
    - Add `Task` to `allowed-tools`, for the decision pass.
 6. Create `skills/autonomous-branch-review-loop/SKILL.md`, `skills/autonomous-design-review-loop/SKILL.md`,
    and `skills/ship-auto/SKILL.md`.
