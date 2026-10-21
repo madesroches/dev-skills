@@ -10,7 +10,7 @@ Add three skills:
   finalize pass. Because a fresh, stateless reviewer now drives trivial fixes every round, the
   loop keeps a ledger of the trivial fixes it has already applied. It refuses to re-apply,
   refine, or reverse any of them, so a nit fixed in round 2 can't be flipped back in round 3.
-- `/ship-auto` is `/ship-issue` for a user who is assumed AFK. It chains design → autonomous plan
+- `/ship-auto` is `/ship-issue` for a user who is assumed AFK (issue-only, matching `ship-issue`). It chains design → autonomous plan
   loop → implementation → autonomous branch loop → PR. It never prompts: wherever a skill in the
   chain would ask, it takes a recorded default instead. When it finishes (or hard-stops), it lists
   the most important decisions it took on the user's behalf.
@@ -108,7 +108,7 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    - A ledgered item re-reported as substantive is still dropped. This carries over the existing
      `deferred` rule: a fresh reviewer's reclassification is noise, not escalation.
    - Count the dropped items per round for the summary.
-   - The filter applies only to trivials. A substantive finding is never dropped for touching a
+   - A substantive finding on a different subject is never dropped just because it shares a
      ledgered location.
 5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
    them **plus** the round's surviving trivials, in the same prompt. After the fixer returns, the
@@ -158,7 +158,7 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
      keeps unrelated WIP out of the PR, and the user can restore it with `git stash pop`.
    - Branch mismatch: take option (b) — create the issue's feature branch off `<base>`.
    - The **Autonomy** section's "hard requirement for the user's judgment" exception is
-     disabled. Instead, take the most conservative option and record it.
+     disabled. Instead, take the most conservative option, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
 2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place
    of `design-review-loop` with a cap of 10.
@@ -167,7 +167,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    session model) with the plan path and those items. It must:
    - Resolve each one by choosing the most conservative option that still satisfies the issue.
      For a `requires user judgment` fix, that means applying or declining it.
-   - Record each resolution as one line in the plan's `## Decisions` section, prefixed `AFK:`.
+   - Record each resolution as one line in the plan's `## Decisions` section, prefixed `AFK:`,
+     and remove each resolved question from `## Open Questions`.
    - Return the lines it wrote.
 
    The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4. This settles
@@ -179,13 +180,14 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    also runs when the chain hard-stops, listing the decisions taken up to that point. The list is
    gathered from these sources, in this priority order:
    1. The preflight defaults taken: stash and branch choice, plus the stash name so the user can
-      restore it.
+      restore it, and each conservative-option choice noted in place of a user-judgment stop.
    2. The decision pass's `AFK:` lines.
    3. Every non-clean loop outcome: findings closed by an unreviewed finalize pass, and anything
       left unfixed.
    4. `pr`'s `Decisions taken (AFK mode):` list.
-   5. The other `## Decisions` lines the plan gained during the run, from
-      `git diff <plan commit>..HEAD` on the plan file.
+   5. The other `## Decisions` lines the plan gained during the run. Read the plan at whichever
+      path it currently has (`tasks/` or `tasks/completed/`, since `pr` moves it), and find the
+      added lines with `git diff -M <plan commit>..HEAD` over both paths.
 
    Cap the list at 10 lines, in that order. If entries were cut, end with a pointer to the plan's
    `## Decisions` section for the full record.
@@ -220,8 +222,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    - Extend the near-mirror bullet: autonomous mode is a shared loop mechanic.
    - Extend the `/ship-issue` bullet: AFK mode, the decision pass, and the wrappers holding no
      logic.
-9. `.claude-plugin/plugin.json` and `marketplace.json`: bump to `1.22.0` and update the shared
-   description to mention autonomous loops and ship-auto. Add a `## [1.22.0]` entry to
+9. `.claude-plugin/plugin.json`: bump the version to `1.22.0`. Update the shared description in
+   both `plugin.json` and `marketplace.json` to mention autonomous loops and ship-auto. Add a `## [1.22.0]` entry to
    `CHANGELOG.md`.
 10. Run `python3 scripts/validate.py`.
 
@@ -310,5 +312,3 @@ log, or a visible pause.
   interrupting it. Should accretion stay dropped, or stay in autonomous mode as well?
 - Should `ship-auto` also post the Decisions taken list as a comment on the PR it opens? An AFK
   user may see the PR before the terminal.
-- Should `ship-auto` accept a free-text task as well as an issue? It's issue-only today, matching
-  `ship-issue`.
