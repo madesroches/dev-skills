@@ -171,7 +171,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place
    of `design-review-loop` with a cap of 10.
 3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
-   questions or `requires user judgment` fixes, spawn one `Task` agent (`general-purpose`,
+   questions or `requires user judgment` fixes, or its finalize pass deliberately left issues
+   unfixed because they needed a decision, spawn one `Task` agent (`general-purpose`,
    session model) with the plan path and those items. It must:
    - Resolve each one by choosing the most conservative option that still satisfies the issue.
      For a `requires user judgment` fix, that means applying or declining it.
@@ -197,8 +198,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
       path it currently has (`tasks/` or `tasks/completed/`, since `pr` moves it), and find the
       added lines with `git diff -M <plan commit>..HEAD` over both paths.
 
-   Cap the list at 10 lines, in that order. If entries were cut, end with a pointer to the plan's
-   `## Decisions` section for the full record.
+   List sources 1-4 in full. Cap source 5 at 10 lines; if entries were cut, end with a pointer to
+   the plan's `## Decisions` section, the only place the full record of source 5 lives.
 
 ## Implementation Steps
 
