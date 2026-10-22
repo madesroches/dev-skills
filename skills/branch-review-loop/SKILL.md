@@ -294,6 +294,7 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
    - A ledgered item re-reported as substantive is still dropped, but recorded: keep its summary
      and location for the final summary.
    - Count the dropped items per round for the summary.
+  - A round left with no issues after the filter stops as *Clean* and skips Phase 5, even though the reviewer did not literally return `NO ISSUES`.
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered location.
 5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
