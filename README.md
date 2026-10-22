@@ -14,6 +14,9 @@ Development workflow skills for Claude Code: PR creation, design planning, and c
 | `/branch-review-loop` | Iteratively review and fix the current branch until it converges |
 | `/implement-and-review` | Implement a design plan, commit it, then iteratively review and fix the branch with a stronger model until it converges |
 | `/ship-issue` | Take a GitHub issue through design, plan review, implementation, independent review, and a pull request in one chain |
+| `/autonomous-branch-review-loop` | `/branch-review-loop` with no round cap and trivial issues fixed in the round they appear |
+| `/autonomous-design-review-loop` | `/design-review-loop` with no round cap and trivial issues fixed in the round they appear |
+| `/ship-auto` | `/ship-issue` for an away-from-keyboard user: never prompts, takes recorded defaults, and reports the decisions it took |
 
 ## Conventions
 
@@ -37,8 +40,10 @@ confirmed ones, classified by severity. The loop skills (`/design-review-loop`,
 fresh reviewer each round, then close out whatever the loop left behind — trivial issues and any
 still-open findings — in a final unreviewed pass. The composite skills chain the others via direct
 `Skill` invocations: `/implement-and-review` = implement + `branch-review-loop` (opus reviewer), and
-`/ship-issue` = `design` → `design-review-loop` → `implement-and-review` → `pr`. Nothing is
-restated, so a change to any skill is inherited by everything built on it.
+`/ship-issue` = `design` → `design-review-loop` → `implement-and-review` → `pr`. The autonomous variants
+(`/autonomous-branch-review-loop`, `/autonomous-design-review-loop`, `/ship-auto`) are thin wrappers that
+invoke the base skill with an "autonomous mode" or "AFK mode" argument, whose behavior lives in the base skill.
+Nothing is restated, so a change to any skill is inherited by everything built on it.
 
 ## Installation
 

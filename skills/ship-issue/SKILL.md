@@ -2,7 +2,7 @@
 name: ship-issue
 description: Take a GitHub issue from design through review, implementation, and a pull request in one autonomous chain
 argument-hint: "<issue url or number>"
-allowed-tools: Skill, Bash(git *), Bash(gh issue view *), Bash(mktemp *), Read, Edit, Write, AskUserQuestion
+allowed-tools: Skill, Task, Bash(git *), Bash(gh issue view *), Bash(mktemp *), Read, Edit, Write, AskUserQuestion
 ---
 
 # Ship Issue — From Issue to Pull Request
@@ -95,7 +95,9 @@ loop's process — so this chain never restates any skill's logic at any level.
 ### Phase 0: Preflight
 
 1. Confirm `$ARGUMENTS` is provided and looks like a GitHub issue reference (a full issue URL or
-   an issue number). If missing, say so and stop — do not invent an issue.
+   an issue number). If missing, say so and stop — do not invent an issue. If the arguments
+   also request `AFK mode` (e.g. `<issue> — AFK mode`), the overrides in `## AFK mode` below
+   apply; it is off by default.
    Then apply the **Autonomous push** check above: if the invocation carries no explicit push
    instruction, emit the one-line reminder now, before proceeding — and continue without pausing.
 2. Confirm the issue exists and capture its metadata:
@@ -154,7 +156,9 @@ loop's process — so this chain never restates any skill's logic at any level.
 4. Commit the plan file:
    - Compose a commit message — subject: `Add design plan for #<number>: <title>` (truncate to
      ≤ 72 chars); body optional. Write it to `<plan commit msg path>` with the **Write** tool.
-   - `git add <plan path>` (the plan file only, by explicit path).
+   - `git add <plan path>` by explicit path — the plan file, plus the `tasks/<slug>_mockups/`
+     folder if `design` produced one (otherwise it stays untracked and trips the dirty-tree
+     prompt downstream).
    - `git commit -F <plan commit msg path>`.
    - **No AI attribution** — no `Co-Authored-By` line, no agent credit.
    Run `git add` and `git commit` as separate calls.
@@ -208,6 +212,60 @@ Report the whole chain concisely:
 - `implement-and-review`'s outcome (implementer commit, review-loop convergence status, the loop's
   finalize commit — or the blocker it stopped on).
 - The PR URL, or the phase at which the chain stopped and why.
+
+## AFK mode
+
+Off by default. When the invocation requests it (`AFK mode`), the user is assumed away: never
+prompt; wherever the chain would ask, take the stated default and record it as a decision. These
+overrides apply on top of the process above, and they override the prose saying the orchestrator
+only does preflight, one plan commit, and relaying (Roles; Notes: "the one commit this skill
+makes", "no per-skill deviation").
+
+1. **Preflight never asks.**
+   - Dirty tree (Phase 0 step 4): run `git stash push -u -m "ship-auto: WIP set aside"` instead
+     of asking. This keeps unrelated WIP out of the PR; the user can restore it with
+     `git stash pop`. Skip step 6's baseline commit.
+   - Branch mismatch (Phase 0 step 5): take option (b), creating the issue's feature branch off
+     `<base>`.
+   - The **Autonomy** section's "hard requirement for the user's judgment" exception is disabled.
+     Take the most conservative option instead, and note the choice as it is made.
+   - The **Autonomous push** reminder is still emitted at the start, without pausing.
+2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place of
+   `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
+   the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap and
+   oscillation-accretion and adds escalation.
+3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
+   questions or `requires user judgment` fixes, or its finalize pass deliberately left issues
+   unfixed because they needed a decision, spawn one `Task` agent (`general-purpose`, session
+   model) with the plan path and those items. It must:
+   - Resolve each one by choosing the most conservative option that still satisfies the issue. For
+     a `requires user judgment` fix, that means applying or declining it.
+   - Record each resolution as one line in the plan's `## Decisions` section (create the section
+     if the plan lacks one), prefixed `AFK:`, and remove each resolved question from
+     `## Open Questions`.
+   - Return the lines it wrote.
+
+   The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
+   subject `Record AFK decisions for #<number>`.
+4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
+5. **PR.** Phase 4 passes `pr` `AFK mode` followed by the Decisions taken list gathered so far
+   (item 6's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
+   shows it alongside `pr`'s own defaults.
+6. **Decisions report (Phase 5).** The final summary leads with a **Decisions taken** list. It also
+   runs when the chain hard-stops, listing the decisions taken up to that point. The list is
+   gathered from these sources, in this priority order:
+   1. The preflight defaults taken: stash and branch choice, plus the stash name so the user can
+      restore it, and each conservative-option choice noted in place of a user-judgment stop.
+   2. The decision pass's `AFK:` lines.
+   3. Every non-clean loop outcome: findings closed by an unreviewed finalize pass, and anything
+      left unfixed.
+   4. `pr`'s `Decisions taken (AFK mode):` list.
+   5. The other `## Decisions` lines the plan gained during the run. Read the plan at whichever
+      path it currently has (`tasks/` or `tasks/completed/`, since `pr` moves it), and find the
+      added lines with `git diff -M <plan commit>..HEAD` over both paths.
+
+   List sources 1-4 in full. Cap source 5 at 10 lines; if entries were cut, end with a pointer to
+   the plan's `## Decisions` section, the only place the full record of source 5 lives.
 
 ## Notes
 

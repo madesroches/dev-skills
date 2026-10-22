@@ -1,13 +1,30 @@
 ---
 name: pr
 description: Run lints/tests, finalize plan file, and create a pull request
-argument-hint: ""
+argument-hint: "[AFK mode]"
 allowed-tools: Bash(git *), Bash(gh *), Bash(mv *), Bash(mkdir *), Bash(ls *), Bash(mktemp *), Read, Glob, Grep, Edit, Write, Task, AskUserQuestion
 ---
 
 # Pull Request — Lint, Test, and Submit
 
 Create a pull request for the current branch after running lints/tests and finalizing any associated plan file.
+
+## AFK mode
+
+Off by default. When `$ARGUMENTS` requests it (`AFK mode`), never prompt the user: each place
+below that would ask takes the default in this table instead, and every default taken is listed in
+the final output under `Decisions taken (AFK mode):`. A caller may append a list of decisions it
+already took (`ship-issue`'s AFK mode does); keep it for the PR body's `## Decisions taken` section.
+
+| Prompt | AFK-mode default |
+|---|---|
+| No issue found (Phase 1) | Open the PR without an issue link. |
+| No checks documented for a changed area (Phase 2) | Run no checks for that area. Say so in the PR body's `## Test plan`. |
+| Plan has incomplete steps (Phase 3) | Leave the plan in `tasks/` and list the incomplete steps in the PR body's `## Summary`. |
+| Auto-fixable lint failure (Guidelines) | Apply the auto-fix, commit it, and re-run the failing checks once. If they still fail, stop as usual. |
+
+Failing checks, a diverged remote, and every other existing stop still stop. Stopping is not
+blocking: the skill ends and reports.
 
 ## Process
 
@@ -25,7 +42,7 @@ Create a pull request for the current branch after running lints/tests and final
    - First, check the plan file found in `tasks/` (see Phase 3) — plans typically have `**GitHub Issue**: #123` or a URL on line 3
    - If no plan file, check commit messages and branch name for issue references (e.g., `#123`, `issue-123`)
    - If not found there, search GitHub issues: `gh issue list --search "<branch name or feature keywords>" --state open` and `--state closed`
-   - If still no match, ask the user with AskUserQuestion
+   - If still no match, ask the user with AskUserQuestion (AFK mode: see the table above)
 
 ### Phase 2: Run Lints and Tests
 
@@ -35,7 +52,7 @@ Discover and run the project's lint, format, and test commands:
 2. From `git diff <base>...HEAD --stat`, determine which areas of the codebase changed
 3. Match changed areas to the relevant commands discovered in step 1. For example, if `CLAUDE.md` documents separate commands for `rust/`, `python/`, and `frontend/` directories, only run the checks for directories with changes
 4. Launch independent checks in parallel using the Task tool. For each check, the task prompt should include the exact command to run and the working directory
-5. If no `CLAUDE.md` exists or no commands are documented for a changed area, ask the user with AskUserQuestion what checks to run
+5. If no `CLAUDE.md` exists or no commands are documented for a changed area, ask the user with AskUserQuestion what checks to run (AFK mode: see the table above)
 
 If any check fails, report the failures and stop. Do NOT create the PR. Tell the user what needs to be fixed.
 
@@ -47,7 +64,7 @@ The plan file should already be part of the branch's diff (moved/updated and com
 2. If a plan file was moved to `tasks/completed/`, good — note it for the PR description
 3. If a plan file exists in `tasks/` (not `completed/`) and relates to this branch:
    - Read it and check if all implementation steps are completed based on the commits
-   - If incomplete, ask the user: "The plan still has incomplete steps. Should I update it and commit before creating the PR?"
+   - If incomplete, ask the user: "The plan still has incomplete steps. Should I update it and commit before creating the PR?" (AFK mode: see the table above)
    - If done, move it to `tasks/completed/`, commit the move, then proceed
 4. If the plan has an associated mockups folder (`tasks/<slug>_mockups/`, referenced from the plan's `## Mockups` section) and it still exists at that path, move it to `tasks/completed/<slug>_mockups/` in the same commit as the plan move
 5. If no plan file is found, that's fine — proceed without one
@@ -87,6 +104,8 @@ Update `CHANGELOG.md` with the changes from this branch.
        results) alongside the automated coverage, so a reviewer can re-run the manual checks
        straight from the PR body
      - If a plan file was moved to completed, mention it: "Design plan: `tasks/completed/<file>`"
+     - AFK mode: `## Decisions taken` — the caller's list first, then one line per default taken
+       from the table above. Omit the section if both are empty.
 
 3. Create the PR. Write the body to a scratch file first — do **not** pass it inline (via
    `--body` or a heredoc): PR bodies contain backticks, quotes, and other shell metacharacters
@@ -98,7 +117,8 @@ Update `CHANGELOG.md` with the changes from this branch.
 gh pr create --title "<title>" --body-file <body file path>
 ```
 
-4. Output the PR URL when done.
+4. Output the PR URL when done. In AFK mode, follow it with `Decisions taken (AFK mode):`, one
+   line per default taken from the table above (or `none`).
 
 ## Guidelines
 
@@ -106,7 +126,7 @@ gh pr create --title "<title>" --body-file <body file path>
 - Never add AI attribution: no `Co-Authored-By` lines in commits and no "Generated with Claude
   Code" (or similar) footers in the PR body — commits and the PR must read as authored by the
   repository's normal author
-- If lints fail with auto-fixable issues (e.g., formatting), ask the user if they want you to fix and commit before retrying
+- If lints fail with auto-fixable issues (e.g., formatting), ask the user if they want you to fix and commit before retrying (AFK mode: see the table above)
 - The issue link is important — always try to find it before falling back to asking
 - Keep the PR title short and descriptive — put details in the body
 - Match the existing PR style in the repository

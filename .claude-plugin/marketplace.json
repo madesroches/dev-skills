@@ -7,7 +7,7 @@
     {
       "name": "dev-skills",
       "source": "./",
-      "description": "Development workflow skills: PR creation, design planning, design and code review with iterative review loops, implement-and-review, and ship-issue end-to-end chaining"
+      "description": "Development workflow skills: PR creation, design planning, design and code review with iterative and autonomous review loops, implement-and-review, and ship-issue/ship-auto end-to-end chaining"
     }
   ]
 }
