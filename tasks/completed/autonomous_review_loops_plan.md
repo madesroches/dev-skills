@@ -315,7 +315,8 @@ log, or a visible pause.
    `/autonomous-branch-review-loop main`. Expected:
    - Round commits include trivial fixes alongside substantive ones.
    - The summary lists, per round, the trivials fixed and the ledgered trivials skipped.
-   - The outcome is clean, only trivial, or non-convergence. It's never round cap or accretion.
+   - The outcome is clean, only trivial, non-convergence, or escalation. It's never round cap or
+     accretion.
 2. Run `/autonomous-design-review-loop tasks/<some plan>.md`. Expected: the same as step 1, plus
    the plan-size report, with `needs user decision` and `requires user judgment` items surfaced
    but not fixed.
