@@ -46,6 +46,9 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
   each round that has substantive issues. Edits the plan file to resolve them and reports what it
   changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
   sufficient and keeps the loop cheaper.
+- **Challenger agent** — autonomous mode only: a fresh `Task` agent (`subagent_type:
+  "general-purpose"`, the reviewer model) spawned each round that has substantive issues, to
+  challenge their severity before the loop acts on them (see `## Autonomous mode`).
 - **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
   spawned at most once, after the loop ends, only if anything is left unresolved. Fixes the
   leftovers in one pass. Unlike the per-round fixer, its work is **not** re-reviewed — the point is
@@ -306,7 +309,8 @@ whatever survives is reported, not looped on again.
 
 Off by default. When the invocation requests it (e.g. "autonomous mode"), these overrides apply
 phase by phase; everything not listed here is unchanged. Its purpose is to keep looping as long as
-reviewers raise substantive issues, and to fix trivial issues in the round they appear.
+reviewers raise substantive issues, to make each of those issues survive a severity challenge
+first, and to fix trivial issues in the round they appear.
 
 1. **No round cap.** Phase 0 sets no cap. A caller-specified cap is ignored in this mode.
 2. **Stop conditions (Phase 2).** Drop *round cap* and *oscillation / accretion*: both stop the loop
@@ -317,15 +321,48 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
      repeat this one. Without a cap, this, *escalation*, and *growth* are the guards against a loop
      that cannot make progress.
    - *Escalation*. A substantive finding matches a `trivial_ledger` entry (same section and subject,
-     as in item 4): a late round is raising as significant something an earlier round settled as a
+     as in item 5): a late round is raising as significant something an earlier round settled as a
      nit. That is the signature of a loop churning on its own edits rather than converging.
    - *Growth*. This is the plan-size guard; its budget stays caller-overridable.
    - *Reviewer failure*, unchanged.
 3. **Trivial ledger replaces `deferred`.** Phase 0 initializes an empty `trivial_ledger` instead of
    `deferred`. Each entry holds the issue's summary, its section, and the fixer's one-line report on
    it, including a report that the fixer declined the fix.
-4. **Ledger filter (Phase 2, before the stop conditions).** Drop any trivial from this round that
-   matches a ledger entry. A match has the same section **and** the same subject (the same
+4. **Severity challenge (Phase 2, right after the set-aside).** With nobody watching to push back on an inflated
+   severity and no round cap, every overrated finding buys a fix round and a review of the edits it
+   caused. So when a round has substantive issues, spawn a fresh challenger agent
+   (`subagent_type: "general-purpose"`, the reviewer model resolved in Phase 0) once Phase 2 has set
+   aside `needs user decision` and `requires user judgment` items, which are never sent. Its prompt
+   holds only the plan path, `<review skill path>`, and this round's remaining substantive issues,
+   numbered and in full — never the round's trivials, the ledger, or anything from earlier rounds. Instruct it:
+
+   > Each issue below was classified **substantive** by a reviewer. Challenge that severity, not the
+   > issue's existence, which has been verified. Read the severity definitions in Phase 4 of the
+   > file at `<review skill path>`, then read the plan and the code each issue's `why` cites.
+   > Start from the position that each issue is trivial. An issue stays substantive only if you can state the
+   > concrete failure it causes: what an implementer following the plan as written would build
+   > wrong, get stuck on, or break. Downgrade it when that failure is hypothetical, or when the
+   > issue is really about wording, formatting, cross-section consistency, or completeness that
+   > changes nothing an implementer would do.
+   > Always keep two kinds, which that Phase 4 makes substantive by definition: a resolved open
+   > question, and verified excess whose fix deletes a work item or a section-scale block.
+   > You may downgrade, never upgrade or drop. Do not edit anything and do not spawn agents.
+   >
+   > Your report must begin with the exact first line `CHALLENGE REPORT`, followed by one line per
+   > issue: `<n> KEEP — <the concrete failure>` or `<n> DOWNGRADE — <why it misses the bar>`.
+
+   Act on its message whose first line is `CHALLENGE REPORT`, with the same tolerance and timing as
+   the reviewer's `FINAL REPORT` (Phase 1). A downgraded issue is a trivial for the rest of the
+   round: the ledger filter, the in-round fix, the ledger, and Phase 5 all treat it as one, and the
+   orchestrator keeps the challenger's reason for the summary. An issue marked `KEEP` or missing
+   from the report stays substantive. If the challenger completes without a `CHALLENGE REPORT`,
+   keep the reviewer's severities for this round, note it in the summary, and do not re-spawn; a
+   failed challenge must not stall or stop the loop. Everything after this step, including
+   `history` and the non-convergence comparison, sees the post-challenge classification, so
+   *escalation* fires only on a finding that survived the challenge. A downgraded re-raise of a
+   ledgered trivial is simply dropped by the ledger filter.
+5. **Ledger filter (Phase 2, after the challenge, before the stop conditions).** Drop any
+   trivial from this round that matches a ledger entry. A match has the same section **and** the same subject (the same
    identifier, phrase, or construct), whether the new finding asks to repeat, refine, or reverse
    the earlier edit.
    - When unsure, drop it. A skipped nit costs nothing; a flip-flop costs a commit and a review
@@ -337,13 +374,13 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
    - A round left with no issues after the filter and no set-aside items stops as *Clean* and skips Phase 5, even though the reviewer did not literally return `NO ISSUES`.
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered section.
-5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
+6. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
    them **plus** the round's surviving trivials, in the same prompt. Phase 3's pre-fix printed list
    includes the trivials being sent, and the fixer returns one line per issue it was given,
    including any it declined. After the fixer returns, the orchestrator appends every trivial it
    sent to `trivial_ledger`, with the fixer's line. Trivials alone never trigger a fix round;
    that is the *nothing fixable* stop.
-6. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
+7. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
    - *Nothing fixable*: the last round's surviving (post-filter) trivials.
    - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
    - *Escalation*: the surviving trivials plus the round's other unresolved substantive issues.
@@ -354,9 +391,11 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
      `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes are not added to the ledger, since nothing reviews after it.
-7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
-   adds escalation. Each round's note adds how many trivials were fixed and how many ledgered
-   trivials were skipped. It also lists each escalated item, by summary and section, with the ledger entry it matched, as
+8. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
+   adds escalation. Each round's note adds how many substantive issues the challenge downgraded,
+   how many trivials were fixed, and how many ledgered trivials were skipped. It lists each
+   downgraded issue by summary and section with the challenger's reason, and notes any round whose
+   challenge failed. It also lists each escalated item, by summary and section, with the ledger entry it matched, as
    left for the user.
 
 `needs user decision` questions and `requires user judgment:` fixes are set aside before the
@@ -391,5 +430,7 @@ the fixer, in either mode.
   analogous signal for code, where fixes are checked by tests rather than by whether five other
   sections re-enumerate them. The tightened oscillation/accretion rule *is* mirrored.
 - Autonomous mode (`## Autonomous mode`) is a shared loop mechanic: it must stay mirrored in
-  `branch-review-loop`, which differs only in using location for section and having no growth stop
-  condition. The `autonomous-design-review-loop` skill is a thin wrapper that enables it.
+  `branch-review-loop`, which differs only in using location for section, having no growth stop
+  condition, and phrasing the severity challenge's bar for code (a runtime failure). Never let the
+  challenge downgrade a resolved open question or deletion-scale excess — that would undo the
+  symmetric-review rule. The `autonomous-design-review-loop` skill is a thin wrapper that enables it.
