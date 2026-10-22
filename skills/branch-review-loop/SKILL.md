@@ -293,13 +293,13 @@ first, and to fix trivial issues in the round they appear.
 3. **Trivial ledger replaces `deferred`.** Phase 0 initializes an empty `trivial_ledger` instead of
    `deferred`. Each entry holds the issue's summary, its location, and the fixer's one-line report on
    it, including a report that the fixer declined the fix.
-4. **Severity challenge (Phase 2, first).** With nobody watching to push back on an inflated
-   severity and no round cap, every overrated finding buys a fix round and a review of the edits it
-   caused. So when a round has substantive issues, spawn a fresh challenger agent
-   (`subagent_type: "general-purpose"`, the reviewer model resolved in Phase 0) before anything else
-   in Phase 2. Its prompt holds only the base branch, `<review skill path>`, and this round's
-   substantive issues, numbered and in full — never the round's trivials, the ledger, or anything
-   from earlier rounds. Instruct it:
+4. **Severity challenge (Phase 2, right after the partition).** With nobody watching to push back
+   on an inflated severity and no round cap, every overrated finding buys a fix round and a review
+   of the edits it caused. So when a round has substantive issues, spawn a fresh challenger agent
+   (`subagent_type: "general-purpose"`, the reviewer model resolved in Phase 0) once Phase 2 has
+   partitioned the issues. Its prompt holds only the base branch, `<review skill path>`, and this
+   round's substantive issues, numbered and in full — never the round's trivials, the ledger, or
+   anything from earlier rounds. Instruct it:
 
    > Each issue below was classified **substantive** by a reviewer. Challenge that severity, not the
    > issue's existence, which has been verified. Read the severity definitions in Phase 4 of the
