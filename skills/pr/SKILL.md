@@ -13,7 +13,8 @@ Create a pull request for the current branch after running lints/tests and final
 
 Off by default. When `$ARGUMENTS` requests it (`AFK mode`), never prompt the user: each place
 below that would ask takes the default in this table instead, and every default taken is listed in
-the final output under `Decisions taken (AFK mode):`.
+the final output under `Decisions taken (AFK mode):`. A caller may append a list of decisions it
+already took (`ship-issue`'s AFK mode does); keep it for the PR body's `## Decisions taken` section.
 
 | Prompt | AFK-mode default |
 |---|---|
@@ -103,6 +104,8 @@ Update `CHANGELOG.md` with the changes from this branch.
        results) alongside the automated coverage, so a reviewer can re-run the manual checks
        straight from the PR body
      - If a plan file was moved to completed, mention it: "Design plan: `tasks/completed/<file>`"
+     - AFK mode: `## Decisions taken` — the caller's list first, then one line per default taken
+       from the table above. Omit the section if both are empty.
 
 3. Create the PR. Write the body to a scratch file first — do **not** pass it inline (via
    `--body` or a heredoc): PR bodies contain backticks, quotes, and other shell metacharacters

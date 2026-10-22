@@ -95,7 +95,11 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    - *Clean* and *only trivial* (*nothing fixable*). The loop runs only while substantive issues
      exist, and trivials never extend it.
    - *Non-convergence*. A substantive set that matches an earlier round's means the next round
-     will repeat this one. Without a cap, this is the only such guard in the branch loop (growth also guards the design loop).
+     will repeat this one. Without a cap, this and *escalation* are the guards in the branch loop
+     (growth also guards the design loop).
+   - *Escalation* (new). A substantive finding matches a `trivial_ledger` entry (same
+     location/section and subject, as in item 4): a late round is raising as significant something
+     an earlier round settled as a nit, which means the loop is churning on its own edits.
    - *Growth* (design loop only). This is the plan-size guard the 1.20.0 convention requires. Its
      budget stays caller-overridable.
    - *Reviewer failure*, unchanged.
@@ -109,8 +113,9 @@ the invocation requests it, the overrides in that section apply. Default-mode te
    reverse the earlier edit.
    - When unsure, drop it. A skipped nit costs nothing; a flip-flop costs a commit and a review
      round.
-   - A ledgered item re-reported as substantive is still dropped, but recorded: keep its summary
-     and location/section for the final summary.
+   - A ledgered item re-reported as substantive is dropped from the round and triggers the
+     *escalation* stop. Keep its summary, location/section, and matched ledger entry for the final
+     summary.
    - Count the dropped items per round for the summary.
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered location.
@@ -123,14 +128,17 @@ the invocation requests it, the overrides in that section apply. Default-mode te
 6. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
    - *Only trivial*: the last round's surviving (post-filter) trivials.
    - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
+   - *Escalation*: those trivials plus the round's other unresolved substantive issues. The
+     escalated items are not sent; overturning a ledgered fix is the user's call, so Phase 6 lists
+     them.
    - *Reviewer failure*: skip Phase 5. This overrides Phase 1's reviewer-failure routing, which
      sends the previous round's trivials to Phase 5; in this mode they are already in
      `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes aren't added to the ledger, since nothing reviews after it.
-7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion. Each
-   round's note adds how many trivials were fixed and how many ledgered trivials were skipped. It also lists each dropped item that was
-   re-reported as substantive, by summary and location/section.
+7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
+   adds escalation. Each round's note adds how many trivials were fixed and how many ledgered
+   trivials were skipped. It also lists each item that escalated, by summary and location/section, with the ledger entry it matched.
 
 In the design loop, `needs user decision` questions and `requires user judgment:` fixes are set
 aside before the trivial partition, exactly as today. A trivial that carries that prefix is never
@@ -147,7 +155,9 @@ gets "a round cap of 10" are qualified to the stop conditions the invoked loop c
 ### `pr` — AFK mode
 
 Phase 1 accepts `AFK mode`. Each question gets a default instead, and every default taken is
-listed in `pr`'s output under `Decisions taken (AFK mode):`.
+listed in `pr`'s output under `Decisions taken (AFK mode):`. The PR body gains a
+`## Decisions taken` section: any decisions list the caller appended to the arguments, then the
+defaults `pr` took (omitted when both are empty).
 
 | Prompt today | AFK-mode default |
 |---|---|
@@ -186,7 +196,8 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
    The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
    subject `Record AFK decisions for #<number>`.
 4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
-5. **PR.** Phase 4 passes `AFK mode` to `pr`.
+5. **PR.** Phase 4 passes `pr` `AFK mode` followed by the Decisions taken list gathered so far
+   (item 6's sources 1-3 and 5, with the same cap), so it is displayed in the PR body.
 6. **Decisions report (Phase 5).** The final summary leads with a **Decisions taken** list. It
    also runs when the chain hard-stops, listing the decisions taken up to that point. The list is
    gathered from these sources, in this priority order:
@@ -215,7 +226,7 @@ Phase 0 accepts `AFK mode`. It applies these overrides, listed in one `## AFK mo
 3. `skills/implement-and-review/SKILL.md`: autonomous-mode pass-through in Phase 0, Phase 2 (including
    its stop-condition list), Phase 3, and the Roles round-cap sentence.
 4. `skills/pr/SKILL.md`: set `argument-hint` to `[AFK mode]`, AFK-mode argument in Phase 1, the four defaults at their prompt sites (or
-   one table that each site references), and the `Decisions taken (AFK mode):` output.
+   one table that each site references), the `Decisions taken (AFK mode):` output, and the PR body's `## Decisions taken` section.
 5. `skills/ship-issue/SKILL.md`:
    - Phase 1 step 4 (applies outside AFK mode too): when `design` produced
      `tasks/<slug>_mockups/`, stage that folder by explicit path together with the plan.
@@ -312,17 +323,16 @@ log, or a visible pause.
    `/ship-auto <issue> — push and open the PR when done` and walk away. Expected:
    - The run never pauses for input.
    - The WIP file is in a stash named `ship-auto: WIP set aside`.
-   - The PR exists.
+   - The PR exists, and its body has a `## Decisions taken` section that includes the stash.
    - The final summary leads with a Decisions taken list that includes the stash.
 4. Run `/branch-review-loop main` and `/ship-issue <issue>`. Expected: default behavior is
    unchanged — trivials deferred to the finalize pass, a cap of 5, and the preflight prompts
    still asked.
 
-## Open Questions
+## Decisions
 
-- Dropping oscillation/accretion follows "keep looping while important issues are raised". But
-  accretion was the guard against a loop manufacturing its own findings (CLAUDE.md, 1.20.0). With
-  no cap, only non-convergence (and growth, for plans) can stop such a run short of the user
-  interrupting it. Should accretion stay dropped, or stay in autonomous mode as well?
-- Should `ship-auto` also post the Decisions taken list as a comment on the PR it opens? An AFK
-  user may see the PR before the terminal.
+- Autonomous mode drops oscillation/accretion (user call): late rounds raising significant issues
+  are expected to converge, or to re-raise a ledgered trivial as substantive, which is the new
+  *escalation* stop.
+- The Decisions taken list is displayed in the PR body (user call), not posted as a separate
+  comment.

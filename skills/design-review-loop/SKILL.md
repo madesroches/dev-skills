@@ -314,7 +314,11 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
    - *Clean* and *nothing fixable remains*. The loop runs only while substantive issues
      exist, and trivials never extend it.
    - *Non-convergence*. A substantive set that matches an earlier round's means the next round will
-     repeat this one. Without a cap, this is one of two guards against a loop that cannot make progress (growth is the other).
+     repeat this one. Without a cap, this, *escalation*, and *growth* are the guards against a loop
+     that cannot make progress.
+   - *Escalation*. A substantive finding matches a `trivial_ledger` entry (same section and subject,
+     as in item 4): a late round is raising as significant something an earlier round settled as a
+     nit. That is the signature of a loop churning on its own edits rather than converging.
    - *Growth*. This is the plan-size guard; its budget stays caller-overridable.
    - *Reviewer failure*, unchanged.
 3. **Trivial ledger replaces `deferred`.** Phase 0 initializes an empty `trivial_ledger` instead of
@@ -326,10 +330,11 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
    the earlier edit.
    - When unsure, drop it. A skipped nit costs nothing; a flip-flop costs a commit and a review
      round.
-   - A ledgered item re-reported as substantive is still dropped, but recorded: keep its summary
-     and section for the final summary.
+   - A ledgered item re-reported as substantive is dropped from this round's issues and triggers
+     the *escalation* stop (item 2). Keep its summary, section, and matched ledger entry for the final
+     summary.
    - Count the dropped items per round for the summary.
-  - A round left with no issues after the filter and no set-aside items stops as *Clean* and skips Phase 5, even though the reviewer did not literally return `NO ISSUES`.
+   - A round left with no issues after the filter and no set-aside items stops as *Clean* and skips Phase 5, even though the reviewer did not literally return `NO ISSUES`.
    - A substantive finding on a different subject is never dropped just because it shares a
      ledgered section.
 5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
@@ -341,14 +346,18 @@ reviewers raise substantive issues, and to fix trivial issues in the round they 
 6. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
    - *Nothing fixable*: the last round's surviving (post-filter) trivials.
    - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
+   - *Escalation*: the surviving trivials plus the round's other unresolved substantive issues.
+     The escalated items are not sent: their ledger entry records a deliberate in-round fix or
+     decline, so overturning it is the user's call, and Phase 6 lists them instead.
    - *Reviewer failure*: skip Phase 5. This overrides Phase 1's reviewer-failure routing, which
      sends the previous round's trivials to Phase 5; in this mode they are already in
      `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes are not added to the ledger, since nothing reviews after it.
-7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion. Each
-   round's note adds how many trivials were fixed and how many ledgered trivials were skipped. It
-   also lists each dropped item that was re-reported as substantive, by summary and section.
+7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
+   adds escalation. Each round's note adds how many trivials were fixed and how many ledgered
+   trivials were skipped. It also lists each escalated item, by summary and section, with the ledger entry it matched, as
+   left for the user.
 
 `needs user decision` questions and `requires user judgment:` fixes are set aside before the
 trivial partition, exactly as in default mode. A trivial that carries that prefix is never sent to

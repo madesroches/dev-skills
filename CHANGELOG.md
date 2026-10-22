@@ -8,15 +8,17 @@ Adds autonomous review loops and `/ship-auto`.
 
 - New `/autonomous-branch-review-loop` and `/autonomous-design-review-loop`: thin wrappers that invoke the
   base loop in a new **autonomous mode** (an `## Autonomous mode` section in each loop): no round cap, the
-  round-cap and oscillation-accretion stops dropped (non-convergence, and growth for plans, remain), and
+  round-cap and oscillation-accretion stops dropped (non-convergence, and growth for plans, remain), a new
+  *escalation* stop when a substantive finding re-raises an already-ledgered trivial, and
   trivial issues fixed in the round they appear, with a `trivial_ledger` that stops a later round from
   repeating, refining, or reversing an earlier trivial fix
 - New `/ship-auto`: a thin wrapper that invokes `ship-issue` in **AFK mode**. It never prompts (dirty tree is
   stashed, branch mismatch takes a new branch), uses the autonomous plan loop, adds a decision pass that
   resolves open questions conservatively into `## Decisions` as `AFK:` lines, and leads its final summary
-  with the decisions taken
+  with the decisions taken, which also appear in the PR body
 - `implement-and-review` accepts `autonomous mode` and then runs `autonomous-branch-review-loop`
-- `pr` accepts `AFK mode`: each prompt takes a default and the output lists `Decisions taken (AFK mode):`
+- `pr` accepts `AFK mode`: each prompt takes a default and the output lists `Decisions taken (AFK mode):`;
+  the PR body gets a `## Decisions taken` section with those defaults and any list the caller passes
 - `ship-issue` Phase 1 now stages the `tasks/<slug>_mockups/` folder with the plan commit, so it no longer
   trips the dirty-tree prompt downstream
 

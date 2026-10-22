@@ -233,7 +233,7 @@ makes", "no per-skill deviation").
 2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place of
    `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
    the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap and
-   oscillation-accretion.
+   oscillation-accretion and adds escalation.
 3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
    questions or `requires user judgment` fixes, or its finalize pass deliberately left issues
    unfixed because they needed a decision, spawn one `Task` agent (`general-purpose`, session
@@ -248,7 +248,9 @@ makes", "no per-skill deviation").
    The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
    subject `Record AFK decisions for #<number>`.
 4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
-5. **PR.** Phase 4 passes `AFK mode` to `pr`.
+5. **PR.** Phase 4 passes `pr` `AFK mode` followed by the Decisions taken list gathered so far
+   (item 6's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
+   shows it alongside `pr`'s own defaults.
 6. **Decisions report (Phase 5).** The final summary leads with a **Decisions taken** list. It also
    runs when the chain hard-stops, listing the decisions taken up to that point. The list is
    gathered from these sources, in this priority order:
