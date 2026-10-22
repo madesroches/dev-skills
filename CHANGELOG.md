@@ -2,6 +2,18 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.23.0] - 2026-10-21
+
+Autonomous loops now challenge the severity reviewers assign.
+
+- `branch-review-loop` and `design-review-loop` autonomous mode (and so `/autonomous-branch-review-loop`,
+  `/autonomous-design-review-loop`, `/ship-auto`): each round with substantive findings spawns a fresh
+  challenger agent on the reviewer model that starts from "trivial" and keeps a finding substantive only if
+  it can name the concrete failure. Downgraded findings become in-round trivials (ledgered, never extending
+  the loop), the challenge runs before the ledger filter so escalation fires only on findings that survive
+  it, a failed challenge keeps the reviewer's severities, and the final summary lists each downgrade with its
+  reason. The plan challenger always keeps resolved open questions and deletion-scale excess
+
 ## [1.22.0] - 2026-10-21
 
 Adds autonomous review loops and `/ship-auto`.
