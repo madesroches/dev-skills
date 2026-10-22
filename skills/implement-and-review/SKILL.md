@@ -23,7 +23,8 @@ left open) in its final phase, so this skill does not add a cleanup pass of its 
   spawned once. Reads the plan, implements every step, and commits the result. `sonnet` is
   sufficient for well-specified implementation work coming from a plan document.
 - **Review loop** — delegated directly to the `branch-review-loop` skill via the `Skill` tool,
-  passing the base branch, a round cap of 10, and a request to use `opus` for the reviewer —
+  passing the base branch, a round cap of 10, and a request to use `opus` for the reviewer (in
+  autonomous mode: `autonomous-branch-review-loop`, no round cap) —
   parameters that skill's own Phase 0 already supports, so this is not a deviation from its
   process, just arguments it's designed to take. It also runs its own finalize pass at the end,
   clearing the trivial issues it skips each round and anything a non-clean stop left open. This
@@ -34,7 +35,9 @@ left open) in its final phase, so this skill does not add a cleanup pass of its 
 ### Phase 0: Preflight
 
 1. Confirm `$ARGUMENTS` is provided and points to an existing file. Read it. If missing or
-   not found, say so and stop — do not guess a plan.
+   not found, say so and stop — do not guess a plan. If the arguments also request `autonomous
+   mode` (e.g. `<plan path> — autonomous mode`), note it: Phase 2 then uses the autonomous review
+   loop. It is off by default.
 2. Resolve the repo's base branch: `git symbolic-ref --short refs/remotes/origin/HEAD`,
    stripping the `origin/` prefix; if that fails (no remote HEAD configured), fall back to
    `main`. Use this as `<base>` here and in Phase 2.
@@ -107,6 +110,12 @@ since the tree is already clean after Phase 1's commit — committing after each
 terminating on its own (clean / only trivial / round cap / non-convergence / oscillation-accretion / reviewer failure),
 and then running its own finalize pass over whatever it left unresolved.
 
+**Autonomous mode** (set in Phase 0): invoke `autonomous-branch-review-loop` instead, passing
+`<base> — use opus for the reviewer` (no round cap). The loop can then stop only on clean / only
+trivial / non-convergence / reviewer failure — it has no round cap and no oscillation-accretion
+stop — so read the stop-condition list above, and Phase 3's convergence wording, as limited to
+those.
+
 Record which stopping condition ended the loop, plus what its finalize pass cleared and anything
 it reported as still unfixed. Treat "clean" as **converged**; every other stopping condition
 (including "only trivial", since that means substantive issues were resolved but something was
@@ -122,7 +131,8 @@ Report:
 - The review loop's outcome: rounds run, per-round fix commits, and the **convergence
   status** — state plainly whether it converged (stopped clean) or did not (hit the round cap,
   stopped with only trivial issues remaining, or stopped on non-convergence or
-  oscillation/accretion with issues still outstanding at that point, or on reviewer failure, in which
+  oscillation/accretion with issues still outstanding at that point — in autonomous mode only
+  the loop's own stops apply, with no round cap or oscillation/accretion — or on reviewer failure, in which
   case the last fix round went unreviewed, or no review completed if it failed in round 1).
 - Its finalize pass: the commit it made (SHA + what it fixed), or that nothing was left to
   finalize — and any issue it reported as deliberately left unfixed.

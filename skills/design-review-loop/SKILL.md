@@ -87,6 +87,9 @@ Set no reviewer model override by default — the reviewer inherits the session'
 If the invocation explicitly requests a different model for the reviewer (e.g. "use opus for the
 reviewer"), use that model instead everywhere Phase 1 spawns the reviewer agent.
 
+Autonomous mode is off by default. If the invocation requests it (e.g. "autonomous mode"), the
+overrides in `## Autonomous mode` below apply, including to the round cap and `deferred` set up here.
+
 ### Phase 1: Review (fresh agent)
 
 Increment `N`. Spawn a **new** reviewer agent, using the reviewer model resolved in Phase 0 (no
@@ -299,6 +302,57 @@ Do not prompt the user during the loop. If the loop stopped on non-convergence o
 with substantive issues outstanding, say so plainly — the finalize pass takes one shot at them, and
 whatever survives is reported, not looped on again.
 
+## Autonomous mode
+
+Off by default. When the invocation requests it (e.g. "autonomous mode"), these overrides apply
+phase by phase; everything not listed here is unchanged. Its purpose is to keep looping as long as
+reviewers raise substantive issues, and to fix trivial issues in the round they appear.
+
+1. **No round cap.** Phase 0 sets no cap. A caller-specified cap is ignored in this mode.
+2. **Stop conditions (Phase 2).** Drop *round cap* and *oscillation / accretion*: both stop the loop
+   while substantive issues are still being raised, which is exactly what this mode is for. Keep:
+   - *Clean* and *nothing fixable remains*. The loop runs only while substantive issues
+     exist, and trivials never extend it.
+   - *Non-convergence*. A substantive set that matches an earlier round's means the next round will
+     repeat this one. Without a cap, this is one of two guards against a loop that cannot make progress (growth is the other).
+   - *Growth*. This is the plan-size guard; its budget stays caller-overridable.
+   - *Reviewer failure*, unchanged.
+3. **Trivial ledger replaces `deferred`.** Phase 0 initializes an empty `trivial_ledger` instead of
+   `deferred`. Each entry holds the issue's summary, its section, and the fixer's one-line report on
+   it, including a report that the fixer declined the fix.
+4. **Ledger filter (Phase 2, before the stop conditions).** Drop any trivial from this round that
+   matches a ledger entry. A match has the same section **and** the same subject (the same
+   identifier, phrase, or construct), whether the new finding asks to repeat, refine, or reverse
+   the earlier edit.
+   - When unsure, drop it. A skipped nit costs nothing; a flip-flop costs a commit and a review
+     round.
+   - A ledgered item re-reported as substantive is still dropped, but recorded: keep its summary
+     and section for the final summary.
+   - Count the dropped items per round for the summary.
+   - A substantive finding on a different subject is never dropped just because it shares a
+     ledgered section.
+5. **Fix trivials in-round (Phase 3).** When a round has substantive issues, the fixer receives
+   them **plus** the round's surviving trivials, in the same prompt. Phase 3's pre-fix printed list
+   includes the trivials being sent, and the fixer returns one line per issue it was given,
+   including any it declined. After the fixer returns, the orchestrator appends every trivial it
+   sent to `trivial_ledger`, with the fixer's line. Trivials alone never trigger a fix round;
+   that is the *nothing fixable* stop.
+6. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
+   - *Nothing fixable*: the last round's surviving (post-filter) trivials.
+   - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
+   - *Reviewer failure*: skip Phase 5. This overrides Phase 1's reviewer-failure routing, which
+     sends the previous round's trivials to Phase 5; in this mode they are already in
+     `trivial_ledger`, fixed or declined in-round.
+
+   Trivials the finalize agent fixes are not added to the ledger, since nothing reviews after it.
+7. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion. Each
+   round's note adds how many trivials were fixed and how many ledgered trivials were skipped. It
+   also lists each dropped item that was re-reported as substantive, by summary and section.
+
+`needs user decision` questions and `requires user judgment:` fixes are set aside before the
+trivial partition, exactly as in default mode. A trivial that carries that prefix is never sent to
+the fixer, in either mode.
+
 ## Notes
 
 - Keep the reviewer's prompt free of prior-round context. This is the one invariant that makes the
@@ -326,3 +380,6 @@ whatever survives is reported, not looped on again.
   reviewer will find violated, so an unbounded plan review accretes; diff size is not the
   analogous signal for code, where fixes are checked by tests rather than by whether five other
   sections re-enumerate them. The tightened oscillation/accretion rule *is* mirrored.
+- Autonomous mode (`## Autonomous mode`) is a shared loop mechanic: it must stay mirrored in
+  `branch-review-loop`, which differs only in using location for section and having no growth stop
+  condition. The `autonomous-design-review-loop` skill is a thin wrapper that enables it.
