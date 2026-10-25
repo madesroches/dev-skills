@@ -2,6 +2,32 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.27.0] - 2026-10-25
+
+`/babysit-pr` keeps the PR branch current with its base.
+
+- When the PR goes `BEHIND` or conflicting because other changes landed, `babysit-pr` rebases onto
+  `origin/<base>` and pushes with `--force-with-lease` (the lease refuses if someone else pushed to the
+  branch), then re-watches CI. Conflicts abort the rebase and are reported; rebases are capped at 3 per run.
+
+## [1.26.0] - 2026-10-25
+
+`/pr` rebases onto the latest base before its first push.
+
+- `pr` Phase 5 fetches `origin/<base>` and rebases a never-pushed branch onto it before pushing, aborting
+  and reporting on conflicts and re-running the checks if the rebase applied. A branch that already has an
+  upstream is not rebased (it would need a force-push); the existing ahead/behind rules still apply.
+
+## [1.25.0] - 2026-10-25
+
+New `/babysit-pr` skill; `/ship-auto` now watches CI after opening the PR.
+
+- Add `babysit-pr`: watches a PR's CI checks, and on failure dispatches a fresh `sonnet` fixer agent,
+  commits and pushes its fix, and watches again. Bounded by a fix-attempt cap (default 3); non-code
+  failures are re-run once rather than sent to a fixer.
+- `ship-issue` AFK mode (so `/ship-auto`) invokes `babysit-pr` after `pr` pushes and opens the PR, and
+  reports its outcome in the final summary. It never hard-stops the chain.
+
 ## [1.24.0] - 2026-10-24
 
 Autonomous design review no longer limits plan size.

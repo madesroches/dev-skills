@@ -212,6 +212,7 @@ Report the whole chain concisely:
 - `implement-and-review`'s outcome (implementer commit, review-loop convergence status, the loop's
   finalize commit — or the blocker it stopped on).
 - The PR URL, or the phase at which the chain stopped and why.
+- AFK mode only: `babysit-pr`'s outcome — CI green, or the stop it ended on and any check still red.
 
 ## AFK mode
 
@@ -249,9 +250,14 @@ makes", "no per-skill deviation").
    subject `Record AFK decisions for #<number>`.
 4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
 5. **PR.** Phase 4 passes `pr` `AFK mode` followed by the Decisions taken list gathered so far
-   (item 6's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
+   (item 7's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
    shows it alongside `pr`'s own defaults.
-6. **Decisions report (Phase 5).** The final summary leads with a **Decisions taken** list. It also
+6. **Babysit CI (new step between Phase 4 and the final summary).** Once `pr` has pushed the branch and opened the PR,
+   invoke the `babysit-pr` skill via the `Skill` tool with the PR URL. It watches CI and dispatches
+   a `sonnet` fixer agent for any failing check, committing and pushing each fix. Its outcome never
+   hard-stops the chain — note it (green, or which stop it ended on and any check still red) for
+   the report. If `pr` stopped before creating a PR, skip this step.
+7. **Decisions report (in the Phase 5 final summary).** The final summary leads with a **Decisions taken** list. It also
    runs when the chain hard-stops, listing the decisions taken up to that point. The list is
    gathered from these sources, in this priority order:
    1. The preflight defaults taken: stash and branch choice, plus the stash name so the user can

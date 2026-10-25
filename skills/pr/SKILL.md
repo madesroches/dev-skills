@@ -86,10 +86,17 @@ Update `CHANGELOG.md` with the changes from this branch.
 
 ### Phase 5: Create the Pull Request
 
-1. Make sure the remote has the branch's commits:
+1. Rebase onto the latest base, then make sure the remote has the branch's commits:
+   - `git fetch origin <base>`
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check whether an upstream is set
-   - If there is no upstream, push with `git push -u origin <branch>`
-   - If an upstream exists, compare with `git rev-list --left-right --count @{u}...HEAD`:
+   - **No upstream** (the branch was never pushed, so rewriting its commits is safe): if
+     `git merge-base --is-ancestor origin/<base> HEAD` fails, the branch is behind — run
+     `git rebase origin/<base>`. On conflicts, run `git rebase --abort` and **stop and report**
+     the conflicting files; never resolve them silently. If the rebase applied, re-run the
+     Phase 2 checks for the changed areas (the base moved under the branch) and stop on a
+     failure as usual. Then push with `git push -u origin <branch>`.
+   - **Upstream set**: the commits are already published, and rebasing them would need a
+     force-push, so do **not** rebase. Compare with `git rev-list --left-right --count @{u}...HEAD`:
      if the local branch is strictly ahead, push with `git push`; if it is behind or has
      diverged (the remote has commits the local branch lacks), **stop and report** — never
      force-push, and never pull/rebase automatically; let the user reconcile and re-run
@@ -122,7 +129,8 @@ gh pr create --title "<title>" --body-file <body file path>
 
 ## Guidelines
 
-- Never force-push or amend commits during this process
+- Never force-push or amend commits during this process. The one history rewrite allowed is the
+  Phase 5 rebase of a never-pushed branch onto `origin/<base>`
 - Never add AI attribution: no `Co-Authored-By` lines in commits and no "Generated with Claude
   Code" (or similar) footers in the PR body — commits and the PR must read as authored by the
   repository's normal author
