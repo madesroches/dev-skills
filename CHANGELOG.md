@@ -2,6 +2,14 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.24.0] - 2026-10-24
+
+Autonomous design review no longer limits plan size.
+
+- `design-review-loop` autonomous mode (and so `/autonomous-design-review-loop`, `/ship-auto`) drops the
+  growth stop condition; plan size is still tracked and reported in the final summary. Non-convergence and
+  escalation remain the guards against a loop that cannot make progress. Interactive mode is unchanged.
+
 ## [1.23.0] - 2026-10-21
 
 Autonomous loops now challenge the severity reviewers assign.
