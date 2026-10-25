@@ -91,8 +91,17 @@ Update `CHANGELOG.md` with the changes from this branch.
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check whether an upstream is set
    - **No upstream** (the branch was never pushed, so rewriting its commits is safe): if
      `git merge-base --is-ancestor origin/<base> HEAD` fails, the branch is behind — run
-     `git rebase origin/<base>`. On conflicts, run `git rebase --abort` and **stop and report**
-     the conflicting files; never resolve them silently. If the rebase applied, re-run the
+     `git rebase origin/<base>`. On conflicts, spawn a fresh `Task` agent (`general-purpose`,
+     `model: "sonnet"`) with the conflicting files and the instruction to read both sides (and
+     `git show REBASE_HEAD`), edit the files to keep the intent of **both** changes with no conflict
+     markers left, never run `git add`/`git commit`/`git rebase`, and say so instead of guessing if
+     the sides genuinely contradict. Then check `git diff --check`, stage the resolved files by
+     explicit path and run `GIT_EDITOR=true git rebase --continue`; a later conflicting commit gets
+     a fresh resolver. If a resolver reports ambiguity, leaves markers, or the rebase stops more
+     than 5 times, run `git rebase --abort` and **stop and report** the conflicting files. Keep a
+     list of each resolved file and how it was resolved, and include it in the final output (and
+     the PR body's `## Summary` as a "Resolved rebase conflicts" bullet) — resolutions are never
+     silent. If the rebase applied, re-run the
      Phase 2 checks for the changed areas (the base moved under the branch) and stop on a
      failure as usual. Then push with `git push -u origin <branch>`.
    - **Upstream set**: the commits are already published, and rebasing them would need a

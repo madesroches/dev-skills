@@ -2,6 +2,14 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.29.0] - 2026-10-25
+
+`/pr` resolves rebase conflicts instead of stopping.
+
+- When the pre-push rebase onto the base conflicts, a fresh sonnet resolver agent edits the conflicted
+  files to keep both sides' intent, as in `babysit-pr`. Ambiguity, leftover markers, or more than 5 stops
+  abort the rebase and report. Resolutions are listed in the output and the PR body.
+
 ## [1.28.0] - 2026-10-25
 
 `/babysit-pr` resolves rebase conflicts instead of stopping.
