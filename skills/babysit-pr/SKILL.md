@@ -58,14 +58,29 @@ PR branch onto the latest base (Phase 1 step 3).
    conflicting, and CI then tests stale code or never starts. Before acting on step 2's result, check `gh pr view <pr> --json mergeStateStatus,baseRefName`.
    If it is `BEHIND` or `DIRTY`:
    - `git fetch origin <baseRefName>`, record the remote branch tip (`git rev-parse @{u}`), then
-     `git rebase origin/<baseRefName>`. On conflicts, `git rebase --abort` and **stop and report**
-     the conflicting files — never resolve them silently.
+     `git rebase origin/<baseRefName>`. On conflicts, resolve them with the conflict resolver (below).
    - Push with `git push --force-with-lease=<headRefName>:<recorded tip>`. This is the only
      force-push this skill makes: it rewrites only commits this run knows about, and the lease
      refuses if someone else pushed to the branch meanwhile (then stop and report).
    - A rebase is not a fix attempt and does not count toward the cap, but cap it at **3** rebases
      per run. Return to Phase 1 to watch the new run (after the ~30 second pause in Phase 2 step 7).
    A passing result only counts as green if the branch is not `BEHIND`/`DIRTY` when checked.
+
+   **Conflict resolver.** While the rebase is stopped on a commit (`git status` shows unmerged
+   paths), spawn a fresh `Task` agent (`general-purpose`, `model: "sonnet"`) with the conflicting
+   files, the base branch, and the instruction to read both sides — and the commit being replayed
+   (`git show REBASE_HEAD`) and what landed on the base — and edit the files so the result keeps the
+   intent of **both** changes, with no conflict markers left. It must not run `git add`, `git commit`,
+   or any `git rebase` command; if the right resolution is genuinely ambiguous (the two sides
+   contradict each other), it says so instead of guessing. Then the orchestrator checks for leftover
+   markers (`git diff --check`), stages the resolved files by explicit path, and runs
+   `GIT_EDITOR=true git rebase --continue`; a later commit that conflicts gets a fresh resolver. If a
+   resolver reports ambiguity, leaves markers, or the rebase has stopped more than **5** times,
+   `git rebase --abort` and **stop and report** the conflicting files (outcome **blocked**). Record
+   each resolved file and a one-line description of how it was resolved for the summary — resolutions
+   are never silent. Before the push, if the project's `CLAUDE.md` documents a fast build or check
+   command, run it once; if it fails, do not push: report the check output and the resolved-files
+   summary, and stop with outcome **blocked** (the branch is left rebased locally, unpushed).
 
 ### Phase 2: Fix
 
@@ -109,6 +124,7 @@ Report concisely:
   failure or the fixer could not fix it, with why), **no CI**, **still pending** (the watch timed
   out), or **blocked** (push rejected or gated).
 - For each fix attempt: the commit subject and which checks it addressed.
+- Each rebase conflict resolved: the file and how it was resolved, so the user can review it.
 - Any check still red, with a link, so the user can pick up from there.
 
 ## Notes

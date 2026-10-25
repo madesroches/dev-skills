@@ -2,6 +2,30 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.30.0] - 2026-10-25
+
+`/pr` rebases branches that already have an upstream.
+
+- A published branch that is behind the base is now rebased (conflicts resolved as in 1.29.0) and pushed
+  with `--force-with-lease` against the recorded remote tip. If the remote has commits the local branch
+  lacks, `pr` still stops and reports.
+
+## [1.29.0] - 2026-10-25
+
+`/pr` resolves rebase conflicts instead of stopping.
+
+- When the pre-push rebase onto the base conflicts, a fresh sonnet resolver agent edits the conflicted
+  files to keep both sides' intent, as in `babysit-pr`. Ambiguity, leftover markers, or more than 5 stops
+  abort the rebase and report. Resolutions are listed in the output and the PR body.
+
+## [1.28.0] - 2026-10-25
+
+`/babysit-pr` resolves rebase conflicts instead of stopping.
+
+- When rebasing onto the base hits conflicts, a fresh sonnet resolver agent edits the conflicted files to
+  keep both sides' intent; the orchestrator stages and continues the rebase. Ambiguous conflicts, leftover
+  markers, or more than 5 stops abort the rebase and report. Every resolution is listed in the summary.
+
 ## [1.27.0] - 2026-10-25
 
 `/babysit-pr` keeps the PR branch current with its base.
