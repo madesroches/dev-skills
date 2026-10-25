@@ -75,6 +75,10 @@ principle one layer down: it delegates its review loop to `branch-review-loop` v
 tool (passing an `opus` reviewer override and a round cap of 10), rather than restating that
 loop's process — so this chain never restates any skill's logic at any level.
 
+Every invocation uses the plugin-qualified name (`dev-skills:design`, never bare `design`). A bare
+name can resolve to a Claude Code built-in command of the same name instead of this plugin's skill —
+the built-in `/design` refuses model invocation, which stopped the chain at Phase 1.
+
 ## Roles
 
 - **Orchestrator** — this skill, in the main context. Sequences the four sub-skills, does the
@@ -138,7 +142,7 @@ loop's process — so this chain never restates any skill's logic at any level.
 
 ### Phase 1: Design the plan, then commit it
 
-1. Invoke the `design` skill via the `Skill` tool, passing the **issue reference** (`$ARGUMENTS`)
+1. Invoke the `dev-skills:design` skill via the `Skill` tool, passing the **issue reference** (`$ARGUMENTS`)
    as its arguments. Let it fetch the issue and write the plan; do not pre-empt its research.
 2. Capture the plan file path from `design`'s output (its Phase 5 reports the path). A plan that
    lists **open questions** is still a complete plan — `design` surfaces open questions as a normal
@@ -165,7 +169,7 @@ loop's process — so this chain never restates any skill's logic at any level.
 
 ### Phase 2: Harden the plan
 
-Invoke the `design-review-loop` skill via the `Skill` tool, passing the **plan path** followed by
+Invoke the `dev-skills:design-review-loop` skill via the `Skill` tool, passing the **plan path** followed by
 an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
 use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
 is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
@@ -180,7 +184,7 @@ what matters.
 
 ### Phase 3: Implement and independently review
 
-Invoke the `implement-and-review` skill via the `Skill` tool, passing the **plan path** as its
+Invoke the `dev-skills:implement-and-review` skill via the `Skill` tool, passing the **plan path** as its
 arguments. Its own preflight will find an existing feature branch (created in Phase 0) and a clean
 tree (the review loop committed its rounds), so it implements in place. It implements the plan,
 commits, and runs the `opus` review loop, which reviews, fixes, and finalizes on its own.
@@ -192,7 +196,7 @@ finalize commit) and continue.
 
 ### Phase 4: Open the pull request
 
-Invoke the `pr` skill via the `Skill` tool with **no arguments**. It runs the project's
+Invoke the `dev-skills:pr` skill via the `Skill` tool with **no arguments**. It runs the project's
 lints/tests for the changed areas, moves the plan to `tasks/completed/`, updates the changelog,
 pushes the branch, and opens the PR — discovering the issue to link from the `**GitHub Issue**:`
 line added in Phase 1.
@@ -231,7 +235,7 @@ makes", "no per-skill deviation").
    - The **Autonomy** section's "hard requirement for the user's judgment" exception is disabled.
      Take the most conservative option instead, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
-2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place of
+2. **Plan loop.** Phase 2 invokes `dev-skills:autonomous-design-review-loop` with the plan path, in place of
    `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
    the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap,
    oscillation-accretion, and growth, and adds escalation.
@@ -253,7 +257,7 @@ makes", "no per-skill deviation").
    (item 7's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
    shows it alongside `pr`'s own defaults.
 6. **Babysit CI (new step between Phase 4 and the final summary).** Once `pr` has pushed the branch and opened the PR,
-   invoke the `babysit-pr` skill via the `Skill` tool with the PR URL. It watches CI and dispatches
+   invoke the `dev-skills:babysit-pr` skill via the `Skill` tool with the PR URL. It watches CI and dispatches
    a `sonnet` fixer agent for any failing check, committing and pushing each fix. Its outcome never
    hard-stops the chain — note it (green, or which stop it ended on and any check still red) for
    the report. If `pr` stopped before creating a PR, skip this step.

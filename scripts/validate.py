@@ -15,6 +15,10 @@ Exits non-zero and prints one line per problem found. Checks:
    distinctively-named tool (Task, Skill, AskUserQuestion) must declare it in
    `allowed-tools`. Lines containing "cannot" are ignored (negative mentions
    like "cannot use the Skill tool").
+6. Skill-invocation names: a skill body that invokes another skill of this
+   plugin must use its qualified name (`dev-skills:design`). A bare name can
+   resolve to a Claude Code built-in command of the same name (the built-in
+   `/design` refuses model invocation).
 """
 
 import json
@@ -30,6 +34,25 @@ REQUIRED_KEYS = ("name", "description", "argument-hint", "allowed-tools")
 HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion")
 
 errors = []
+
+
+def check_qualified_invocations(skill_names, plugin_name):
+    names = "|".join(sorted(map(re.escape, skill_names), key=len, reverse=True))
+    # "`x` skill via the `Skill` tool" or "invoke(s/d) [the] `x`", across line wraps.
+    patterns = (
+        re.compile(rf"`({names})`\s+skill\s+via\s+the\s+`Skill`\s+tool"),
+        re.compile(rf"\binvoke[sd]?\s+(?:the\s+)?`({names})`", re.IGNORECASE),
+    )
+    for skill_file in sorted(ROOT.glob("skills/*/SKILL.md")):
+        text = skill_file.read_text()
+        rel = skill_file.relative_to(ROOT)
+        hits = {
+            (text.count("\n", 0, m.start()) + 1, m.group(1))
+            for pattern in patterns
+            for m in pattern.finditer(text)
+        }
+        for line, name in sorted(hits):
+            err(f"{rel}:{line}: invokes bare `{name}`; use `{plugin_name}:{name}`")
 
 
 def err(msg: str) -> None:
@@ -108,6 +131,8 @@ def main() -> int:
     names = check_skills()
     check_manifests()
     check_docs(names)
+    plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
+    check_qualified_invocations(names, plugin["name"])
     if errors:
         for e in errors:
             print(f"FAIL: {e}")
