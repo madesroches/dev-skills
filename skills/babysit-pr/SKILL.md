@@ -79,8 +79,8 @@ PR branch onto the latest base (Phase 1 step 3).
    `git rebase --abort` and **stop and report** the conflicting files (outcome **blocked**). Record
    each resolved file and a one-line description of how it was resolved for the summary — resolutions
    are never silent. Before the push, if the project's `CLAUDE.md` documents a fast build or check
-   command, run it once; if it fails, treat the resolution as failed and abort as above only if the
-   rebase is still in progress, otherwise continue to the push and let CI and Phase 2 handle it.
+   command, run it once; if it fails, do not push: report the check output and the resolved-files
+   summary, and stop with outcome **blocked** (the branch is left rebased locally, unpushed).
 
 ### Phase 2: Fix
 
