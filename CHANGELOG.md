@@ -2,6 +2,14 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.30.0] - 2026-10-25
+
+`/pr` rebases branches that already have an upstream.
+
+- A published branch that is behind the base is now rebased (conflicts resolved as in 1.29.0) and pushed
+  with `--force-with-lease` against the recorded remote tip. If the remote has commits the local branch
+  lacks, `pr` still stops and reports.
+
 ## [1.29.0] - 2026-10-25
 
 `/pr` resolves rebase conflicts instead of stopping.
