@@ -389,6 +389,5 @@ first, and to fix trivial issues in the round they appear.
   rather than by whether other sections re-enumerate them. The oscillation/accretion rule *is*
   shared.
 - Autonomous mode (`## Autonomous mode`) is a shared loop mechanic: it must stay mirrored in
-  `design-review-loop`, which differs only in using section for location, keeping growth as a
-  stop condition, and phrasing the severity challenge's bar for a plan (an implementer's failure,
+  `design-review-loop`, which differs only in using section for location and phrasing the severity challenge's bar for a plan (an implementer's failure,
   with resolved open questions and deletion-scale excess always kept). The `autonomous-branch-review-loop` skill is a thin wrapper that enables it.

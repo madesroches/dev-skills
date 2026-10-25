@@ -313,17 +313,16 @@ reviewers raise substantive issues, to make each of those issues survive a sever
 first, and to fix trivial issues in the round they appear.
 
 1. **No round cap.** Phase 0 sets no cap. A caller-specified cap is ignored in this mode.
-2. **Stop conditions (Phase 2).** Drop *round cap* and *oscillation / accretion*: both stop the loop
+2. **Stop conditions (Phase 2).** Drop *round cap*, *oscillation / accretion*, and *growth*: all stop the loop
    while substantive issues are still being raised, which is exactly what this mode is for. Keep:
    - *Clean* and *nothing fixable remains*. The loop runs only while substantive issues
      exist, and trivials never extend it.
    - *Non-convergence*. A substantive set that matches an earlier round's means the next round will
-     repeat this one. Without a cap, this, *escalation*, and *growth* are the guards against a loop
+     repeat this one. Without a cap, this and *escalation* are the guards against a loop
      that cannot make progress.
    - *Escalation*. A substantive finding matches a `trivial_ledger` entry (same section and subject,
      as in item 5): a late round is raising as significant something an earlier round settled as a
      nit. That is the signature of a loop churning on its own edits rather than converging.
-   - *Growth*. This is the plan-size guard; its budget stays caller-overridable.
    - *Reviewer failure*, unchanged.
 3. **Trivial ledger replaces `deferred`.** Phase 0 initializes an empty `trivial_ledger` instead of
    `deferred`. Each entry holds the issue's summary, its section, and the fixer's one-line report on
@@ -382,7 +381,7 @@ first, and to fix trivial issues in the round they appear.
    that is the *nothing fixable* stop.
 7. **Finalize (Phase 5).** Same shape as today. Its input depends on why the loop stopped:
    - *Nothing fixable*: the last round's surviving (post-filter) trivials.
-   - *Non-convergence* or *growth*: those trivials plus the unresolved substantive issues.
+   - *Non-convergence*: those trivials plus the unresolved substantive issues.
    - *Escalation*: the surviving trivials plus the round's other unresolved substantive issues.
      The escalated items are not sent: their ledger entry records a deliberate in-round fix or
      decline, so overturning it is the user's call, and Phase 6 lists them instead.
@@ -391,8 +390,8 @@ first, and to fix trivial issues in the round they appear.
      `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes are not added to the ledger, since nothing reviews after it.
-8. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
-   adds escalation. Each round's note adds how many substantive issues the challenge downgraded,
+8. **Final summary (Phase 6).** The outcome list drops round cap, oscillation-accretion, and
+   growth, and adds escalation. Each round's note adds how many substantive issues the challenge downgraded,
    how many trivials were fixed, and how many ledgered trivials were skipped. It lists each
    downgraded issue by summary and section with the challenger's reason, and notes any round whose
    challenge failed. It also lists each escalated item, by summary and section, with the ledger entry it matched, as
@@ -424,13 +423,12 @@ the fixer, in either mode.
   loop mechanics here (preflight, stop conditions, commit protocol, reviewer/fixer roles, model
   overrides), make the same change in the sibling skill — history shows they drift otherwise.
 - Two mechanics here are **deliberately not mirrored** in `branch-review-loop`: the growth stop
-  condition and the plan-size bookkeeping it needs. A plan's own bookkeeping (Files to Modify,
+  condition (interactive mode only; autonomous mode has none) and the plan-size bookkeeping it needs. A plan's own bookkeeping (Files to Modify,
   step lists, rationale) turns every addition into a fresh consistency obligation a later
   reviewer will find violated, so an unbounded plan review accretes; diff size is not the
   analogous signal for code, where fixes are checked by tests rather than by whether five other
   sections re-enumerate them. The tightened oscillation/accretion rule *is* mirrored.
 - Autonomous mode (`## Autonomous mode`) is a shared loop mechanic: it must stay mirrored in
-  `branch-review-loop`, which differs only in using location for section, having no growth stop
-  condition, and phrasing the severity challenge's bar for code (a runtime failure). Never let the
+  `branch-review-loop`, which differs only in using location for section and phrasing the severity challenge's bar for code (a runtime failure). Never let the
   challenge downgrade a resolved open question or deletion-scale excess — that would undo the
   symmetric-review rule. The `autonomous-design-review-loop` skill is a thin wrapper that enables it.

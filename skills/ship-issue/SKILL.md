@@ -232,8 +232,8 @@ makes", "no per-skill deviation").
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
 2. **Plan loop.** Phase 2 invokes `autonomous-design-review-loop` with the plan path, in place of
    `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
-   the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap and
-   oscillation-accretion and adds escalation.
+   the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap,
+   oscillation-accretion, and growth, and adds escalation.
 3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
    questions or `requires user judgment` fixes, or its finalize pass deliberately left issues
    unfixed because they needed a decision, spawn one `Task` agent (`general-purpose`, session

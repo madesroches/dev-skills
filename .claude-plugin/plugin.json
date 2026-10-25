@@ -1,5 +1,5 @@
 {
   "name": "dev-skills",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "Development workflow skills: PR creation, design planning, design and code review with iterative and autonomous review loops, implement-and-review, and ship-issue/ship-auto end-to-end chaining"
 }
