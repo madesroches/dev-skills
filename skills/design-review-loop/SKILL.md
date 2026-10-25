@@ -390,8 +390,8 @@ first, and to fix trivial issues in the round they appear.
      `trivial_ledger`, fixed or declined in-round.
 
    Trivials the finalize agent fixes are not added to the ledger, since nothing reviews after it.
-8. **Final summary (Phase 6).** The outcome list drops round cap and oscillation-accretion and
-   adds escalation. Each round's note adds how many substantive issues the challenge downgraded,
+8. **Final summary (Phase 6).** The outcome list drops round cap, oscillation-accretion, and
+   growth, and adds escalation. Each round's note adds how many substantive issues the challenge downgraded,
    how many trivials were fixed, and how many ledgered trivials were skipped. It lists each
    downgraded issue by summary and section with the challenger's reason, and notes any round whose
    challenge failed. It also lists each escalated item, by summary and section, with the ledger entry it matched, as
@@ -423,13 +423,12 @@ the fixer, in either mode.
   loop mechanics here (preflight, stop conditions, commit protocol, reviewer/fixer roles, model
   overrides), make the same change in the sibling skill — history shows they drift otherwise.
 - Two mechanics here are **deliberately not mirrored** in `branch-review-loop`: the growth stop
-  condition and the plan-size bookkeeping it needs. A plan's own bookkeeping (Files to Modify,
+  condition (interactive mode only; autonomous mode has none) and the plan-size bookkeeping it needs. A plan's own bookkeeping (Files to Modify,
   step lists, rationale) turns every addition into a fresh consistency obligation a later
   reviewer will find violated, so an unbounded plan review accretes; diff size is not the
   analogous signal for code, where fixes are checked by tests rather than by whether five other
   sections re-enumerate them. The tightened oscillation/accretion rule *is* mirrored.
 - Autonomous mode (`## Autonomous mode`) is a shared loop mechanic: it must stay mirrored in
-  `branch-review-loop`, which differs only in using location for section, having no growth stop
-  condition, and phrasing the severity challenge's bar for code (a runtime failure). Never let the
+  `branch-review-loop`, which differs only in using location for section and phrasing the severity challenge's bar for code (a runtime failure). Never let the
   challenge downgrade a resolved open question or deletion-scale excess — that would undo the
   symmetric-review rule. The `autonomous-design-review-loop` skill is a thin wrapper that enables it.
