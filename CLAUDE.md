@@ -21,7 +21,7 @@ skills/
   ship-issue/SKILL.md          — chains design → design-review-loop → implement-and-review → pr for a GitHub issue
   autonomous-branch-review-loop/SKILL.md — thin wrapper: branch-review-loop in autonomous mode
   autonomous-design-review-loop/SKILL.md — thin wrapper: design-review-loop in autonomous mode
-  babysit-pr/SKILL.md          — watches a PR's CI; dispatches a sonnet fixer agent per failing round, commits and pushes the fix
+  babysit-pr/SKILL.md          — watches a PR's CI; dispatches a sonnet fixer agent per failing round, commits and pushes the fix; a sonnet resolver agent handles rebase conflicts
   ship-auto/SKILL.md           — thin wrapper: ship-issue in AFK mode (never prompts, reports decisions taken)
 ```
 
