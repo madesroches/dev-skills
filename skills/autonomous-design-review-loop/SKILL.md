@@ -7,7 +7,7 @@ allowed-tools: Skill
 
 # Autonomous Design Review Loop
 
-Invoke the `design-review-loop` skill via the `Skill` tool, passing `$ARGUMENTS — autonomous mode`.
+Invoke the `dev-skills:design-review-loop` skill via the `Skill` tool, passing `$ARGUMENTS — autonomous mode`.
 Pass through anything else in `$ARGUMENTS` unchanged, and relay that skill's final summary.
 
 This skill holds no logic of its own: all behavior (no round cap, the severity challenge, the trivial

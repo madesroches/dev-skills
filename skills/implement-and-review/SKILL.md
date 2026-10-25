@@ -22,7 +22,7 @@ left open) in its final phase, so this skill does not add a cleanup pass of its 
 - **Implementer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
   spawned once. Reads the plan, implements every step, and commits the result. `sonnet` is
   sufficient for well-specified implementation work coming from a plan document.
-- **Review loop** — delegated directly to the `branch-review-loop` skill via the `Skill` tool,
+- **Review loop** — delegated directly to the `dev-skills:branch-review-loop` skill via the `Skill` tool,
   passing the base branch, a round cap of 10, and a request to use `opus` for the reviewer (in
   autonomous mode: `autonomous-branch-review-loop`, no round cap) —
   parameters that skill's own Phase 0 already supports, so this is not a deviation from its
@@ -102,7 +102,7 @@ couldn't resolve), stop here and report the blocker to the user instead of proce
 ### Phase 2: Review loop (opus)
 
 Confirm the implementer's commit landed (`git log --oneline -1`). Then invoke the
-`branch-review-loop` skill via the `Skill` tool, passing: the base branch `<base>` (resolved in
+`dev-skills:branch-review-loop` skill via the `Skill` tool, passing: the base branch `<base>` (resolved in
 this skill's Phase 0), an instruction to use a round cap of 10, and an instruction to use `opus`
 for the reviewer (e.g. `<base> — use opus for the reviewer and a round cap of 10`). It runs its
 whole process autonomously — including its own baseline-commit check, which will find nothing to do
@@ -110,7 +110,7 @@ since the tree is already clean after Phase 1's commit — committing after each
 terminating on its own (clean / only trivial / round cap / non-convergence / oscillation-accretion / reviewer failure),
 and then running its own finalize pass over whatever it left unresolved.
 
-**Autonomous mode** (set in Phase 0): invoke `autonomous-branch-review-loop` instead, passing
+**Autonomous mode** (set in Phase 0): invoke `dev-skills:autonomous-branch-review-loop` instead, passing
 `<base> — use opus for the reviewer` (no round cap). The loop can then stop only on clean / only
 trivial / non-convergence / escalation / reviewer failure — it has no round cap and no
 oscillation-accretion stop — so read the stop-condition list above, and Phase 3's convergence wording, as limited to

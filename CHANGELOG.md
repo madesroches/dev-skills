@@ -2,6 +2,15 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.30.1] - 2026-10-25
+
+Skills now invoke one another by plugin-qualified name.
+
+- `ship-issue`, `ship-auto`, `implement-and-review`, and the two autonomous wrappers call
+  `dev-skills:<name>` instead of the bare name. A bare `design` resolved to Claude Code's built-in
+  `/design` command, which refuses model invocation, and `/ship-auto` stopped at its first stage.
+- `scripts/validate.py` fails on any bare invocation of this plugin's skills.
+
 ## [1.30.0] - 2026-10-25
 
 `/pr` rebases branches that already have an upstream.
