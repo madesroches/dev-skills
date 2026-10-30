@@ -2,6 +2,16 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.31.0] - 2026-10-30
+
+`/pr` appends changelog entries at the end of their subject section.
+
+- When a changelog splits its categories into subject sections (e.g. `#### Guardian` under
+  `### Added`), `pr` picks the section from the issue's or PR's `area:` label and adds the entry at
+  the end, so branches on different subjects rebase without a changelog conflict. A changelog
+  convention the project documents (`CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`) now overrides the
+  skill's defaults, and `## [Unreleased]` is recognized as well as `## Unreleased`.
+
 ## [1.30.1] - 2026-10-25
 
 Skills now invoke one another by plugin-qualified name.
