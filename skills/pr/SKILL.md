@@ -73,12 +73,26 @@ The plan file should already be part of the branch's diff (moved/updated and com
 
 Update `CHANGELOG.md` with the changes from this branch.
 
-1. Read `CHANGELOG.md` to understand the current format and the `## Unreleased` section
+1. Read `CHANGELOG.md` to understand the current format and the unreleased section (`## Unreleased`
+   or `## [Unreleased]`). Also read any changelog convention the project documents, usually in
+   `CONTRIBUTING.md`, `CLAUDE.md` or `AGENTS.md`. A documented convention overrides the defaults
+   below.
 2. Review the commits (`git log --oneline <base>..HEAD`) and the PR summary you're about to write
-3. Add concise bullet points under the `## Unreleased` section:
-   - Group under an existing bold category header (e.g., `**Enhancements:**`, `**Bug Fixes:**`) or create a new one if nothing fits
+3. Add concise bullet points under the unreleased section:
+   - Group under an existing category header (e.g., `### Added` / `### Fixed`, or bold
+     `**Enhancements:**` / `**Bug Fixes:**`) or create a new one if nothing fits
+   - **Subject sections.** If the categories are split further into subject sections (e.g.,
+     `#### Guardian` under `### Added`), pick the subject from the issue's or PR's `area:` label
+     (`gh issue view <n> --json labels`), else from the area of the codebase the diff touches. With
+     several labels, take the one a reader would look under first. If the subject section does not
+     exist yet, create it where the existing order puts it (usually alphabetical)
+   - **Position.** In a subject section, add the entry at the **end** of the section, never at the
+     top: the grouping exists so that branches on different subjects edit different lines and
+     rebase without conflicts, and branches on the same subject still conflict if they all insert
+     at the top. Without subject sections, follow where existing entries are added
    - Each bullet should be a short description with the issue number in parentheses, e.g., `* Add zoom buttons to chart (#123)`
-   - Match the style of existing entries — start with a verb (Add, Fix, Refactor, Update, Remove), include issue/PR number
+   - Match the style of existing entries (bullet character, wording, line wrapping, where the
+     issue/PR number goes)
    - Don't duplicate entries that are already in the changelog
 4. Stage and commit the changelog update as two separate calls: `git add CHANGELOG.md`, then
    `git commit -m "Update changelog"`
