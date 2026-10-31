@@ -116,12 +116,6 @@ changes:
   conditions are unchanged: a blocked implementer still halts the chain before review. The final
   summary reports the implementer commit and the loop's convergence status exactly as it reports
   `implement-and-review`'s today, and AFK decisions are passed through unchanged.
-- Net stack for the chain: `ship-issue` → `implement` → `Task`, and `ship-issue` →
-  `branch-review-loop` → `Task`; no skill is loaded from inside another skill below `ship-issue`.
-
-**Neutral prose elsewhere.** Frontmatter descriptions, README, and `ship-issue`'s role list say
-"a faster fixer agent" / "a stronger reviewer" — placeholders cannot appear in frontmatter, and
-the README is not a skill.
 
 **Validation (`scripts/validate.py`, new check 7).** For each skill:
 1. If the body uses `{{coding}}` or `{{thinking}}`, it contains the canonical declaration verbatim
@@ -158,8 +152,10 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
    `{{thinking}}`.
 4a. **Ship chain**: `ship-issue` requests a `{{thinking}}` reviewer from its plan loop (both
    modes); add `model: opus` to `ship-auto`'s frontmatter; reword `ship-issue`'s role list.
-5. **README / CLAUDE.md**: add `/implement` to the skill table and architecture list, change
-   "twelve" to "thirteen" skills, update the `implement-and-review` and `ship-issue` convention
+5. **README / CLAUDE.md**: add `/implement` to the skill table and architecture list, to the
+   CLAUDE.md:7 skill-name list, change "twelve" to "thirteen" skills, reword the CLAUDE.md:20
+   `implement-and-review` line neutrally as a wrapper over `implement` and `branch-review-loop`,
+   neutralize the brand names at CLAUDE.md:42-43 (validate.py does not scan CLAUDE.md), update the `implement-and-review` and `ship-issue` convention
    bullets (the composite now chains `design` → `design-review-loop` → `implement` →
    `branch-review-loop` → `pr`); neutral wording in the skill table; README gets a short "Using other
    models" section (env-var remap first, edit-the-declaration second, with the caveat that prompts
@@ -186,9 +182,6 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
   reading as Anthropic-only. Kept as the recommended customization path, not the whole solution.
 - **`ship-issue` spawns the implementer itself** instead of a new skill: avoids a thirteenth skill
   but restates the implementer's contract inside an orchestrator meant to stay limited. Rejected.
-- **Split as a separate plan/release**: independent changes, but folding keeps `implement`,
-  `implement-and-review`, and `ship-issue` from being edited twice (once for tiers, once for the
-  split). Folded in.
 - **Declaration duplicated in seven files**: accepted; `validate.py` keeps it byte-identical, the
   same enforcement pattern as the qualified-invocation check.
 
@@ -202,35 +195,11 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 - Per the docs, the `Task` `model` parameter takes aliases only (`sonnet`/`opus`/`haiku`/`fable`),
   never full IDs, so customization is alias swaps or the `ANTHROPIC_DEFAULT_*_MODEL` remap. Note
   aliases resolve differently per provider (e.g. `opus` is an older version on Foundry).
-- `/ship-auto` design-on-thinking is done by pinning the wrapper's `model:` frontmatter plus an
-  explicit thinking reviewer, not by wrapping `design` in a `Task` agent (spawn-depth constraint).
-
-- The round cap of 10 and the `{{thinking}}` reviewer request now live in both `ship-issue` and the
-  `implement-and-review` wrapper. Accepted: `ship-issue` already passes a round cap to
-  `design-review-loop` (the `{{thinking}}` reviewer request is new there, mirroring what
-  `implement-and-review` does for the code reviewer), so this matches the established pattern, and
-  nothing of either loop's process is restated.
-- `implement-and-review` stays as a public skill (standalone use, existing habits) rather than
-  being removed once `ship-issue` stops calling it.
-
-- Verified in scratch runs (Claude Code 2.1.316, `claude -p` with scratch skills; `modelUsage` from
-  the JSON result is the evidence, since a model's self-reported ID is unreliable):
-  - `{{coding}}` passes through a skill body untouched; `$ARGUMENTS` is substituted and an
-    undeclared `$coding` also stays literal, so `{{...}}` is safe.
-  - A skill's `model: haiku` frontmatter ran the whole invocation on that model even though the
-    session was `sonnet`, and when that skill invoked a second, unpinned skill via the `Skill`
-    tool, all 3 turns (including the nested one) still ran on the pinned model, with no calls on
-    the session model. `ship-auto`'s `model:` pin therefore carries into `ship-issue`, `design`,
-    and the review loops' orchestration.
-  - An alias remapped to a model the provider cannot serve does not fall back: the subagent fails
-    with `model_not_found` (HTTP 404) naming the model, and the orchestrator sees an agent failure.
-    The skills' existing blocked/failed-agent handling already stops and reports; the README's
-    "Using other models" section states that every alias in use must resolve to a model the
-    provider can serve.
-- `ship-issue` already resolves `<base>` in its own Phase 0 (step 3), so the review loop is handed
-  that value and `implement` does not need to report it. `implement` still resolves `<base>`
-  itself for its own branch check.
-
+- `/ship-auto` design-on-thinking is settled by scratch runs (Claude Code 2.1.316): `{{...}}`
+  placeholders pass through skill bodies untouched; a skill's `model:` pin carries into skills it
+  invokes within the same turn; an alias the provider cannot serve fails with `model_not_found` and
+  is not retried (the README "Using other models" section must say every alias in use has to
+  resolve to a servable model).
 ## Documentation
 
 - `README.md`: neutral skill table with `/implement` added; revised `ship-issue` composition line;
@@ -251,21 +220,14 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 
 ## Manual Verification
 
+All entries depend on live model routing and are not automated.
+
 0. Run `/dev-skills:implement` alone on a tiny plan from a clean tree on `main`: confirm it creates
    the feature branch, commits once, and does not start a review loop.
-   Then run `/dev-skills:implement-and-review` on another tiny plan and confirm it produces the
-   same implementer commit followed by the review loop. Not automated: depends on `Task`, git
-   state, and a live model.
-1. In a scratch session, run `/dev-skills:implement-and-review` (or `/dev-skills:babysit-pr`)
-   on a small plan and confirm the spawned agents use the aliases from the declaration. Not
-   automated: it depends on Claude Code's `Task` tool and a live model.
+1. In a scratch session, run `/dev-skills:implement-and-review` (or `/dev-skills:babysit-pr`) on a
+   small plan and confirm the spawned agents use the aliases from the declaration, and that the
+   implementer commit is followed by the review loop.
 2. Start a session on a cheap model, run `/ship-auto` on a tiny issue, and confirm the plan was
-   authored and reviewed on the strong model while the implementer ran on the coding model. Not
-   automated: depends on live model routing.
+   authored and reviewed on the strong model while the implementer ran on the coding model.
 3. Set `ANTHROPIC_DEFAULT_SONNET_MODEL` to a different model ID and confirm the fixer agent runs
-   on it. Not automated for the same reason.
-
-## Open Questions
-
-None. All three open questions from the first draft and the base-branch question were resolved
-(see Decisions).
+   on it.
