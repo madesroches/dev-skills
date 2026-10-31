@@ -66,9 +66,9 @@ To run on other models:
 
 Every alias in use has to resolve to a model your provider can serve: an alias it cannot serve fails
 with `model_not_found` and is not retried. Aliases also resolve to different versions per provider.
-The prompts were tuned on Claude models; results on others may vary. `/ship-auto` additionally pins
-its session turn to the `opus` alias in its frontmatter (frontmatter cannot hold a placeholder), so
-that alias must resolve too.
+The prompts were tuned on Claude models; results on others may vary. `/ship-auto` authors the plan on the
+session's own model (it requests a strong reviewer for the plan loop, but not for `design` itself),
+so start it on the strong model you want the plan written by.
 
 ## Installation
 

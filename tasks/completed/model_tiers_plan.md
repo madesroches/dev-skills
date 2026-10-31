@@ -187,6 +187,7 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 
 ## Decisions
 
+- Post-review reversal: `ship-auto` no longer pins `model: opus` in its frontmatter (and `validate.py` has no frontmatter exemption). A hard-coded alias in one skill undercut the brand-free goal; `design` authoring runs on the session model and the README says to start `/ship-auto` on the strong model.
 - Placeholder syntax is `{{coding}}` / `{{thinking}}`, not `$coding` / `$thinking`: skills already
   use `$ARGUMENTS`, so `$` tokens risk substitution collisions.
 - The declaration states the concrete `model` value to pass, not just a class description: the

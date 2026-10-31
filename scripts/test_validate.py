@@ -56,9 +56,11 @@ class CheckModelTiers(unittest.TestCase):
         text = skill(DECL + "\n\nUse `{{thinking}}`.")
         self.assertEqual(check_model_tiers("x", text), [])
 
-    def test_alias_as_frontmatter_model_value_passes(self):
+    def test_alias_as_frontmatter_model_value_fails(self):
         fm = FM.replace("allowed-tools: Read\n", "allowed-tools: Read\nmodel: opus\n")
-        self.assertEqual(check_model_tiers("x", skill("Plain body.", fm=fm)), [])
+        problems = check_model_tiers("x", skill("Plain body.", fm=fm))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("opus", problems[0])
 
     def test_unknown_token_fails(self):
         text = skill(DECL + "\n\nUse `{{coding}}` and `{{fast}}`.")

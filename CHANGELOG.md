@@ -17,7 +17,7 @@ Skills name models by role, and implementation is split from review in the ship 
   `branch-review-loop`.
 - `/ship-issue` invokes `implement` and `branch-review-loop` directly instead of
   `implement-and-review`, and requests a `{{thinking}}` reviewer from its plan loop too.
-  `/ship-auto` pins `model: opus` so design authoring runs on the strong model.
+  `/ship-auto` authors the plan on the session model, so start it on the strong model.
 
 ## [1.31.0] - 2026-10-30
 

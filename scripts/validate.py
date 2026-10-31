@@ -21,8 +21,8 @@ Exits non-zero and prints one line per problem found. Checks:
    `/design` refuses model invocation).
 7. Model tiers: a skill that uses a `{{coding}}`/`{{thinking}}` placeholder must
    carry the canonical model-tier declaration byte-for-byte (and vice versa);
-   model names (sonnet, opus, haiku, fable) may appear only in that declaration
-   or a frontmatter `model:` value; unknown `{{...}}` tokens are rejected.
+   model names (sonnet, opus, haiku, fable) may appear only in that declaration;
+   unknown `{{...}}` tokens are rejected.
 """
 
 import json
@@ -38,8 +38,8 @@ REQUIRED_KEYS = ("name", "description", "argument-hint", "allowed-tools")
 HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion")
 
 # The one paragraph that binds the placeholders to model aliases. Byte-identical
-# in every skill that uses a placeholder; the only place (besides a frontmatter
-# `model:` value) a model alias may appear in a skill file.
+# in every skill that uses a placeholder; the only place a model alias may
+# appear in a skill file.
 MODEL_TIERS_DECLARATION = (
     "**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,\n"
     "mechanical work \u2014 pass `model: \"sonnet\"`. `{{thinking}}` is the tier for judgment \u2014 pass\n"
@@ -59,13 +59,6 @@ def check_model_tiers(rel, text):
     has_decl = MODEL_TIERS_DECLARATION in text
     # Keep the declaration's newlines so reported line numbers match the file.
     rest = text.replace(MODEL_TIERS_DECLARATION, "\n" * MODEL_TIERS_DECLARATION.count("\n"))
-    # A frontmatter `model:` value may be an alias (frontmatter cannot hold a placeholder).
-    fm = re.match(r"\A---\n(.*?)\n---\n", rest, re.DOTALL)
-    if fm:
-        lines = [
-            re.sub(r"^(model:).*$", r"\1", ln) for ln in fm.group(1).splitlines()
-        ]
-        rest = "---\n" + "\n".join(lines) + "\n---\n" + rest[fm.end() :]
     uses = any(p in rest for p in TIER_PLACEHOLDERS)
     if uses and not has_decl:
         problems.append(f"{rel}: uses a model-tier placeholder without the canonical declaration")
