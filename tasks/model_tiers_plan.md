@@ -125,7 +125,8 @@ the README is not a skill.
 
 **Validation (`scripts/validate.py`, new check 7).** For each skill:
 1. If the body uses `{{coding}}` or `{{thinking}}`, it contains the canonical declaration verbatim
-   (the constant lives in `validate.py`); if it contains the declaration, it uses at least one.
+   (the constant lives in `validate.py`); if it contains the declaration, it uses at least one
+   `{{coding}}` / `{{thinking}}` outside the declaration paragraph (as check 2 excludes it).
 2. No `sonnet`, `opus`, `haiku`, or `fable` (case-insensitive, word-bounded) appears anywhere in
    the file outside the declaration paragraph and the value of a frontmatter `model:` key.
 3. Only `{{coding}}` and `{{thinking}}` exist as `{{...}}` tokens.
@@ -143,7 +144,9 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
    wording, including the "four sub-skills" count (:67, :84; becomes five), the "Why direct Skill"
    rationale (:73-76), the Phase 3 opening (:188-190), AFK step 4 (:255), the Phase 5 summary
    bullet (:216-217), and the Notes (:284-296); the rationale and Notes are rewritten to describe
-   the `implement` plus `branch-review-loop` stack.
+   the `implement` plus `branch-review-loop` stack. Strip `Task` and `AskUserQuestion` mentions
+   from the wrapper's Roles/Notes prose (no longer in its `allowed-tools`, so `validate.py` would
+   flag them), and keep `Skill` out of `implement`'s prose.
 2. **Declare** the paragraph in `branch-review-loop`, `design-review-loop`, `implement`,
    `implement-and-review`, `babysit-pr`, `pr`, `ship-issue`. Apply to the two loops identically
    (mirror rule).
@@ -240,7 +243,8 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 - Unit tests (`scripts/test_validate.py`) for `check_model_tiers` with constructed skill text:
   clean file passes; placeholder without declaration fails; declaration without placeholder fails;
   declaration with altered wording fails; brand name in body fails; brand name in frontmatter
-  fails; brand name inside the declaration passes; unknown `{{x}}` token fails.
+  fails; brand name inside the declaration passes; brand alias as the value of a frontmatter `model:` key
+  passes; unknown `{{x}}` token fails.
 - CI: the existing validate workflow runs `validate.py` against the real repo (catches a skill
   that drifted) and now runs the unit tests.
 - Existing checks stay without unit tests; retrofitting them is out of scope.
