@@ -91,19 +91,19 @@ changes:
 **Implement/review split.**
 - New `skills/implement/SKILL.md` (`argument-hint: "<path to plan file>"`): the current
   `implement-and-review` Phase 0 (steps 1-6, baseline commit message prefixed `implement:`) and
-  Phase 1 verbatim, with the implementer on `{{coding}}`. It does not run the review loop. Its final
-  report adds the resolved `<base>` branch, so callers need not resolve it again. Blocked
+  Phase 1 verbatim, with the implementer on `{{coding}}`. It does not run the review loop. It
+  resolves `<base>` for its own branch check; callers resolve their own. Blocked
   implementer: stop and report, as today. No mode argument: AFK callers already clean the tree
   before invoking it.
 - `implement-and-review` becomes a wrapper: confirm the plan path, invoke `dev-skills:implement`,
-  stop if it is blocked, then invoke `dev-skills:branch-review-loop` with `<base>`, a round cap of
-  10, and a `{{thinking}}` reviewer (`dev-skills:autonomous-branch-review-loop`, no cap, when its
+  stop if it is blocked, resolve `<base>` the way `implement` does (`git symbolic-ref`, falling back
+  to `main`), then invoke `dev-skills:branch-review-loop` with it, a round cap of 10, and a `{{thinking}}` reviewer (`dev-skills:autonomous-branch-review-loop`, no cap, when its
   arguments request `autonomous mode`), then write the combined summary. It keeps its public
   contract; only its internals shrink. Its `allowed-tools` drop what it no longer uses (`Task`,
-  `AskUserQuestion`, `Write`, `Bash(mktemp *)`).
+  `AskUserQuestion`, `Write`, `Bash(mktemp *)`) and keep `Read`, `Skill`, and `Bash(git symbolic-ref *)`.
 - `ship-issue` stage 3 becomes two invocations: `dev-skills:implement` with the plan path, then
   `dev-skills:branch-review-loop` (AFK: `dev-skills:autonomous-branch-review-loop`) with `<base>`
-  from implement's report, a cap of 10 (none in AFK), and a `{{thinking}}` reviewer. Fail-stop
+  from its own Phase 0, a cap of 10 (none in AFK), and a `{{thinking}}` reviewer. Fail-stop
   conditions are unchanged: a blocked implementer still halts the chain before review. The final
   summary reports the implementer commit and the loop's convergence status exactly as it reports
   `implement-and-review`'s today, and AFK decisions are passed through unchanged.
@@ -195,6 +195,24 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 - `implement-and-review` stays as a public skill (standalone use, existing habits) rather than
   being removed once `ship-issue` stops calling it.
 
+- Verified in scratch runs (Claude Code 2.1.316, `claude -p` with scratch skills; `modelUsage` from
+  the JSON result is the evidence, since a model's self-reported ID is unreliable):
+  - `{{coding}}` passes through a skill body untouched; `$ARGUMENTS` is substituted and an
+    undeclared `$coding` also stays literal, so `{{...}}` is safe.
+  - A skill's `model: haiku` frontmatter ran the whole invocation on that model even though the
+    session was `sonnet`, and when that skill invoked a second, unpinned skill via the `Skill`
+    tool, all 3 turns (including the nested one) still ran on the pinned model, with no calls on
+    the session model. `ship-auto`'s `model:` pin therefore carries into `ship-issue`, `design`,
+    and the review loops' orchestration.
+  - An alias remapped to a model the provider cannot serve does not fall back: the subagent fails
+    with `model_not_found` (HTTP 404) naming the model, and the orchestrator sees an agent failure.
+    The skills' existing blocked/failed-agent handling already stops and reports; the README's
+    "Using other models" section states that every alias in use must resolve to a model the
+    provider can serve.
+- `ship-issue` already resolves `<base>` in its own Phase 0 (step 3), so the review loop is handed
+  that value and `implement` does not need to report it. `implement` still resolves `<base>`
+  itself for its own branch check; the report line is dropped.
+
 ## Documentation
 
 - `README.md`: neutral skill table with `/implement` added; revised `ship-issue` composition line;
@@ -215,7 +233,7 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 ## Manual Verification
 
 0. Run `/dev-skills:implement` alone on a tiny plan from a clean tree on `main`: confirm it creates
-   the feature branch, commits once, reports the base branch, and does not start a review loop.
+   the feature branch, commits once, and does not start a review loop.
    Then run `/dev-skills:implement-and-review` on another tiny plan and confirm it produces the
    same implementer commit followed by the review loop. Not automated: depends on `Task`, git
    state, and a live model.
@@ -230,16 +248,5 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 
 ## Open Questions
 
-- Does `ship-issue` already hold the base branch from its own preflight, or must it take it from
-  `implement`'s report? Check `ship-issue` Phase 0 when editing; the plan assumes the report.
-- `{{...}}` substitution is undocumented (the docs list only `$ARGUMENTS`, `$N`, `$name`, `${...}`;
-  an unmatched `$name` becomes an empty string, which confirms `$coding` is unsafe). Expected to
-  pass through untouched; confirm with a scratch skill before step 2.
-- Does a `model:` frontmatter on `ship-auto` still apply while the nested `Skill` calls
-  (`ship-issue`, `design`, ...) run? The docs scope it to "the rest of the current turn" but do not
-  address skill-to-skill nesting. Confirm in a scratch run; if it does not carry over, fall back to
-  documenting that `/ship-auto` should be started on the strong model (the explicit thinking
-  reviewer from step 4a still holds either way).
-- What does Claude Code do when a requested alias is unavailable on the user's provider? The docs
-  describe an inherit fallback with a warning in some cases but not for sub-agent aliases a
-  provider lacks. If it errors mid-loop, add a fail-fast note to the README.
+None. All three open questions from the first draft and the base-branch question were resolved
+(see Decisions).
