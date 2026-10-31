@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: Watch a pull request's CI until it passes, dispatching a sonnet fixer agent to repair any failing checks
+description: Watch a pull request's CI until it passes, dispatching a fixer agent to repair any failing checks
 argument-hint: "[pr number or url] [— attempt cap N]"
 allowed-tools: Bash(gh *), Bash(git *), Bash(mktemp *), Read, Write, Task
 ---
@@ -8,8 +8,14 @@ allowed-tools: Bash(gh *), Bash(git *), Bash(mktemp *), Read, Write, Task
 # Babysit PR — Watch CI, Fix What Breaks
 
 Watch the CI checks of an open pull request until they all pass. When a check fails, dispatch a
-fresh `sonnet` fixer agent to repair it, commit and push the fix, and watch again. Ends when CI is
+fresh `{{coding}}` fixer agent to repair it, commit and push the fix, and watch again. Ends when CI is
 green, when the attempt cap is hit, or when the problem is not something a fixer can repair.
+
+**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,
+mechanical work — pass `model: "sonnet"`. `{{thinking}}` is the tier for judgment — pass
+`model: "opus"`. To run on other models, remap those aliases with Claude Code's
+`ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL`, or swap the two quoted
+values for another alias (`sonnet`, `opus`, `haiku`, `fable`) here.
 
 This skill is **fully autonomous** once started — it does not prompt. It never amends, never adds AI
 attribution to commits, and force-pushes only in one case: `--force-with-lease` after rebasing the
@@ -20,7 +26,7 @@ PR branch onto the latest base (Phase 1 step 3).
 - **Orchestrator** — this skill, in the main context. Resolves the PR, polls checks, collects
   failure logs, spawns the fixer, commits and pushes, and writes the summary. It does **not** edit
   code itself.
-- **Fixer agent** — a fresh `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
+- **Fixer agent** — a fresh `Task` agent (`subagent_type: "general-purpose"`, `model` = `{{coding}}`)
   spawned per failing round. It receives the failing check names, the relevant log excerpts, and the
   PR branch, diagnoses the root cause in the code, and fixes it in the working tree. It does not
   commit or push.
@@ -67,7 +73,7 @@ PR branch onto the latest base (Phase 1 step 3).
    A passing result only counts as green if the branch is not `BEHIND`/`DIRTY` when checked.
 
    **Conflict resolver.** While the rebase is stopped on a commit (`git status` shows unmerged
-   paths), spawn a fresh `Task` agent (`general-purpose`, `model: "sonnet"`) with the conflicting
+   paths), spawn a fresh `Task` agent (`general-purpose`, `model` = `{{coding}}`) with the conflicting
    files, the base branch, and the instruction to read both sides — and the commit being replayed
    (`git show REBASE_HEAD`) and what landed on the base — and edit the files so the result keeps the
    intent of **both** changes, with no conflict markers left. It must not run `git add`, `git commit`,
@@ -94,7 +100,7 @@ PR branch onto the latest base (Phase 1 step 3).
    timeout with no failing step, a missing secret or permission — do not spend an attempt on a
    fixer: for a transient-looking one re-run it once (`gh run rerun <id> --failed`) and return to
    Phase 1; otherwise stop and report it as unfixable from code.
-4. Spawn the fixer (`Task`, `general-purpose`, `model: "sonnet"`) with: the PR number and branch,
+4. Spawn the fixer (`Task`, `general-purpose`, `model` = `{{coding}}`) with: the PR number and branch,
    each failing check's name and log excerpt, the instruction to find the **root cause** and make
    the smallest correct change (no suppressing or deleting the failing test or lint rule, no
    unrelated edits), to run the failing check locally if the project's `CLAUDE.md` documents a
@@ -129,7 +135,7 @@ Report concisely:
 
 ## Notes
 
-- **Fixer is `sonnet`, fresh each attempt.** A new agent per round sees only the current failure,
+- **Fixer is `{{coding}}`, fresh each attempt.** A new agent per round sees only the current failure,
   not previous rounds' reasoning; the orchestrator holds the attempt count.
 - **Rebase over merge.** Matching `pr`'s rebase-onto-base convention keeps history linear; the
   lease-guarded force-push is safe because the branch is this run's own PR branch.

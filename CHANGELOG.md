@@ -2,6 +2,23 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.32.0] - 2026-10-31
+
+Skills name models by role, and implementation is split from review in the ship chain.
+
+- Skills use `{{coding}}` and `{{thinking}}` instead of `sonnet`/`opus`. One canonical "Model tiers"
+  declaration per skill binds them to aliases; remap the aliases with
+  `ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL` or edit the declaration. See
+  README "Using other models".
+- `scripts/validate.py` check 7 enforces the declaration, bans model names elsewhere, and rejects
+  unknown `{{...}}` tokens. New `scripts/test_validate.py` unit-tests it and runs in CI.
+- New `/implement` skill: the implementation half of `/implement-and-review`, ending with a
+  `BLOCKED:`-or-success report. `/implement-and-review` is now a thin wrapper over `implement` and
+  `branch-review-loop`.
+- `/ship-issue` invokes `implement` and `branch-review-loop` directly instead of
+  `implement-and-review`, and requests a `{{thinking}}` reviewer from its plan loop too.
+  `/ship-auto` pins `model: opus` so design authoring runs on the strong model.
+
 ## [1.31.0] - 2026-10-30
 
 `/pr` appends changelog entries at the end of their subject section.

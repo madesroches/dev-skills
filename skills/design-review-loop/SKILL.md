@@ -16,6 +16,12 @@ trivial issues it deliberately skipped each round, plus any substantive issues s
 the plan is handed back with no known open issues except the questions and fixes that genuinely
 need the user's decision.
 
+**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,
+mechanical work — pass `model: "sonnet"`. `{{thinking}}` is the tier for judgment — pass
+`model: "opus"`. To run on other models, remap those aliases with Claude Code's
+`ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL`, or swap the two quoted
+values for another alias (`sonnet`, `opus`, `haiku`, `fable`) here.
+
 This skill is **fully autonomous** once started — it does not prompt between rounds. It
 commits the plan file after each fixer pass so every round is diffable and revertable.
 
@@ -42,14 +48,14 @@ orchestrator (this skill) keeps the cross-round bookkeeping; the reviewer never 
   user's own model choice, not a fixed tier. A caller can explicitly request a different model for
   the reviewer (see Phase 0) — the same mechanism `branch-review-loop` offers — so a composite
   skill can get a stronger plan reviewer without restating this skill's process.
-- **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`) spawned
+- **Fixer agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model` = `{{coding}}`) spawned
   each round that has substantive issues. Edits the plan file to resolve them and reports what it
-  changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `sonnet` is
+  changed. Fixing a confirmed, well-specified issue is comparatively mechanical, so `{{coding}}` is
   sufficient and keeps the loop cheaper.
 - **Challenger agent** — autonomous mode only: a fresh `Task` agent (`subagent_type:
   "general-purpose"`, the reviewer model) spawned each round that has substantive issues, to
   challenge their severity before the loop acts on them (see `## Autonomous mode`).
-- **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model: "sonnet"`)
+- **Finalize agent** — a `Task` agent (`subagent_type: "general-purpose"`, `model` = `{{coding}}`)
   spawned at most once, after the loop ends, only if anything is left unresolved. Fixes the
   leftovers in one pass. Unlike the per-round fixer, its work is **not** re-reviewed — the point is
   to close out known issues, not to restart the loop.
@@ -87,8 +93,9 @@ default (see Phase 2's growth stop condition). If the user asked for a different
 instead.
 
 Set no reviewer model override by default — the reviewer inherits the session's current model.
-If the invocation explicitly requests a different model for the reviewer (e.g. "use opus for the
-reviewer"), use that model instead everywhere Phase 1 spawns the reviewer agent.
+If the invocation explicitly requests a different model for the reviewer — a tier name (e.g.
+"use the `{{thinking}}` tier for the reviewer") or an explicit alias — use it instead everywhere
+Phase 1 spawns the reviewer agent. A tier name resolves through the declaration above.
 
 Autonomous mode is off by default. If the invocation requests it (e.g. "autonomous mode"), the
 overrides in `## Autonomous mode` below apply, including to the round cap and `deferred` set up here.
@@ -184,7 +191,7 @@ as a short numbered list — one line per issue: `section: summary → fix`. Lab
 `Round N — fixing X issue(s):`. This gives the user visibility into what is being changed before
 any edits happen.
 
-Spawn a fixer agent with `model: "sonnet"`, passing: the plan path and the **substantive**
+Spawn a fixer agent with `model` = `{{coding}}`, passing: the plan path and the **substantive**
 issues from this round (summary, section, why, fix for each). Instruct it to:
 
 > For each issue, edit the plan file at `<plan path>` to resolve it. Apply the suggested fix
@@ -252,7 +259,7 @@ If there is nothing left (the loop stopped clean, or only `needs user decision` 
 or commit.
 
 Otherwise, print the list of items about to be fixed — one line each: `section: summary` — labeled
-e.g. `Finalizing X leftover issue(s):`. Then spawn one finalize agent with `model: "sonnet"`,
+e.g. `Finalizing X leftover issue(s):`. Then spawn one finalize agent with `model` = `{{coding}}`,
 passing the plan path and that list (summary, section, why, fix for each). Instruct it to:
 
 > For each issue, edit the plan file at `<plan path>` to resolve it. Apply the suggested fix or a

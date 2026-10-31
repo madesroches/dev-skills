@@ -9,8 +9,14 @@ allowed-tools: Skill, Task, Bash(git *), Bash(gh issue view *), Bash(mktemp *), 
 
 Take the GitHub issue at `$ARGUMENTS` all the way to a pull request by sequencing the repo's
 existing skills: write a design plan (`design`) and commit it, harden that plan
-(`design-review-loop`), implement and independently review the result (`implement-and-review`),
-then finalize and open the PR (`pr`).
+(`design-review-loop`), implement it (`implement`), review the result independently
+(`branch-review-loop`), then finalize and open the PR (`pr`).
+
+**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,
+mechanical work — pass `model: "sonnet"`. `{{thinking}}` is the tier for judgment — pass
+`model: "opus"`. To run on other models, remap those aliases with Claude Code's
+`ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL`, or swap the two quoted
+values for another alias (`sonnet`, `opus`, `haiku`, `fable`) here.
 
 This skill is **connective tissue only**. It does not itself write the plan, review it,
 implement code, or open the PR — each of those is delegated to the corresponding skill,
@@ -27,7 +33,7 @@ must be immediately followed by the next stage; it is never a place to stop and 
 
 The **only** things that stop the chain are the hard blockers enumerated per phase: no issue
 reference given, the issue can't be fetched, `design` produced **no plan file at all**,
-`implement-and-review`'s implementer was **blocked**, or `pr`'s checks failed. Nothing else halts
+`implement`'s implementer was **blocked**, or `pr`'s checks failed. Nothing else halts
 it. In particular:
 
 - **Open questions are not a stop condition.** `design` routinely lists open questions in its
@@ -64,16 +70,17 @@ user already knows why and how to avoid it next time.
 
 ## Why direct `Skill` invocation (and not read-as-text)
 
-`ship-issue` needs **no deviation** from any of the four skills it chains — it wants each run
+`ship-issue` needs **no deviation** from any of the five skills it chains — it wants each run
 verbatim, following each skill's own supported inputs. So it invokes each one through the `Skill`
-tool, passing `design-review-loop` a higher round cap (Phase 2) and `implement-and-review` the
-plan path, the same way a user would — arguments each skill's own Phase 0 already knows how to
-honor, not a change to its process. Each invoked skill then executes its own preflight, its own
-`!`-prefixed commands, and its own subagents natively. Because nothing is restated, any change to
-a sub-skill's process is inherited automatically. `implement-and-review` itself follows the same
-principle one layer down: it delegates its review loop to `branch-review-loop` via the `Skill`
-tool (passing an `opus` reviewer override and a round cap of 10), rather than restating that
-loop's process — so this chain never restates any skill's logic at any level.
+tool, passing `design-review-loop` and `branch-review-loop` a higher round cap and a `{{thinking}}`
+reviewer request (Phases 2 and 3) and `implement` the plan path, the same way a user would —
+arguments each skill's own Phase 0 already knows how to honor, not a change to its process. Each
+invoked skill then executes its own preflight, its own `!`-prefixed commands, and its own
+subagents natively. Because nothing is restated, any change to a sub-skill's process is inherited
+automatically. Implementation and review are two separate invocations (`implement`, then
+`branch-review-loop`) rather than the `implement-and-review` wrapper, so each runs one level
+below this skill and the wrapper's instructions never sit in the orchestrator's context for the
+whole review loop — this chain never restates any skill's logic at any level.
 
 Every invocation uses the plugin-qualified name (`dev-skills:design`, never bare `design`). A bare
 name can resolve to a Claude Code built-in command of the same name instead of this plugin's skill —
@@ -81,16 +88,18 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
 
 ## Roles
 
-- **Orchestrator** — this skill, in the main context. Sequences the four sub-skills, does the
+- **Orchestrator** — this skill, in the main context. Sequences the five sub-skills, does the
   git/`gh` connective work, commits the plan once, and writes the final summary. It does not
   design, review, implement, or open the PR itself.
 - **`design`** — invoked with the issue reference. Researches the codebase and writes the plan
   document. Produces no code.
-- **`design-review-loop`** — invoked with the plan path and a round cap of 10 (double its own
-  default). Autonomously reviews and fixes the plan until it converges, committing each round,
+- **`design-review-loop`** — invoked with the plan path, a round cap of 10 (double its own
+  default), and a request for the `{{thinking}}` tier for its reviewer. Autonomously reviews and fixes the plan until it converges, committing each round,
   then clears its own leftovers in a final pass.
-- **`implement-and-review`** — invoked with the plan path. Implements the plan (sonnet), commits,
-  and runs the `opus` `branch-review-loop`, which reviews, fixes, and finalizes.
+- **`implement`** — invoked with the plan path. Implements the plan on the `{{coding}}` tier and
+  commits; ends with a report that begins `BLOCKED:` on failure.
+- **`branch-review-loop`** — invoked with `<base>`, a round cap of 10, and a request for the
+  `{{thinking}}` tier for its reviewer. Reviews, fixes, and finalizes the implementation.
 - **`pr`** — invoked with no arguments. Runs lints/tests, moves the plan to `tasks/completed/`,
   updates the changelog, pushes, and opens the PR.
 
@@ -146,8 +155,8 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
    as its arguments. Let it fetch the issue and write the plan; do not pre-empt its research.
 2. Capture the plan file path from `design`'s output (its Phase 5 reports the path). A plan that
    lists **open questions** is still a complete plan — `design` surfaces open questions as a normal
-   part of its Phase 5 output, and they are resolved downstream by `design-review-loop` and
-   `implement-and-review`, not by pausing here. Open questions are **not** a stop condition, and are
+   part of its Phase 5 output, and they are resolved downstream by `design-review-loop`, the
+   implementer, and the code review, not by pausing here. Open questions are **not** a stop condition, and are
    never a reason to ask the user anything at this point. Stop **only** if `design` produced no plan
    file at all — e.g. it could not fetch the issue or was otherwise hard-blocked — in which case
    relay that and **stop**. Do not fabricate a plan path, and otherwise proceed immediately to
@@ -171,8 +180,11 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
 
 Invoke the `dev-skills:design-review-loop` skill via the `Skill` tool, passing the **plan path** followed by
 an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
-use a round cap of 10`) — that skill's own Phase 0 already supports a user-specified cap, so this
-is not a deviation from its process, just an argument it's designed to take. It runs autonomously,
+use a round cap of 10 and the {{thinking}} tier for the reviewer`) — that skill's own Phase 0
+already supports a user-specified cap and reviewer model, so this is not a deviation from its
+process, just arguments it's designed to take. The reviewer request works regardless of the
+session model, so the plan is reviewed on the strong tier even when `design` authored it on a
+cheaper one. It runs autonomously,
 committing after each fix round, terminates on its own (clean / nothing fixable / round cap /
 non-convergence / oscillation-accretion / growth / reviewer failure), and then clears whatever it left unresolved in
 its own finalize pass. Note its reported outcome for the final summary — including the plan-size
@@ -182,17 +194,20 @@ converging — then continue regardless. Anything its finalize pass left unfixed
 carried forward, not stopped on: the implementation stage and its review pass can still surface
 what matters.
 
-### Phase 3: Implement and independently review
+### Phase 3: Implement, then independently review
 
-Invoke the `dev-skills:implement-and-review` skill via the `Skill` tool, passing the **plan path** as its
-arguments. Its own preflight will find an existing feature branch (created in Phase 0) and a clean
-tree (the review loop committed its rounds), so it implements in place. It implements the plan,
-commits, and runs the `opus` review loop, which reviews, fixes, and finalizes on its own.
-
-If it reports the implementer was **blocked** (could not complete the plan, or failing checks it
-could not resolve), relay that and **stop** — do not proceed to open a PR for an incomplete
-implementation. Otherwise note its outcome (implementer commit, review-loop convergence status,
-finalize commit) and continue.
+1. Invoke the `dev-skills:implement` skill via the `Skill` tool, passing the **plan path** as its
+   arguments. Its own preflight will find an existing feature branch (created in Phase 0) and a
+   clean tree (the review loop committed its rounds), so it implements in place. It implements
+   the plan on the `{{coding}}` tier, commits, and ends with a report. If that report begins
+   `BLOCKED:` (could not complete the plan, or failing checks it could not resolve), relay that
+   and **stop** — do not review or open a PR for an incomplete implementation. Otherwise keep its
+   report (implementer commit, checks, manual-verification status) and continue.
+2. Invoke the `dev-skills:branch-review-loop` skill via the `Skill` tool, passing `<base>` (from
+   Phase 0), a round cap of 10, and a request to use the `{{thinking}}` tier for the reviewer
+   (e.g. `<base> — use the {{thinking}} tier for the reviewer and a round cap of 10`). It reviews,
+   fixes, and finalizes on its own. Note its outcome (convergence status, finalize commit) and
+   continue.
 
 ### Phase 4: Open the pull request
 
@@ -213,8 +228,9 @@ Report the whole chain concisely:
 - `design-review-loop`'s outcome (converged, or which stopping condition fired), the plan-size
   trajectory it reported, what its finalize pass cleared, and anything it left for the user —
   both `needs user decision` open questions and fixes it flagged `requires user judgment`.
-- `implement-and-review`'s outcome (implementer commit, review-loop convergence status, the loop's
-  finalize commit — or the blocker it stopped on).
+- `implement`'s outcome (implementer commit, checks, manual-verification status — or the blocker
+  it stopped on) and `branch-review-loop`'s outcome (convergence status, the loop's finalize
+  commit).
 - The PR URL, or the phase at which the chain stopped and why.
 - AFK mode only: `babysit-pr`'s outcome — CI green, or the stop it ended on and any check still red.
 
@@ -236,7 +252,7 @@ makes", "no per-skill deviation").
      Take the most conservative option instead, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
 2. **Plan loop.** Phase 2 invokes `dev-skills:autonomous-design-review-loop` with the plan path, in place of
-   `design-review-loop` with a cap of 10. Phase 1 passes `design` only the issue reference, with
+   `design-review-loop` with a cap of 10 (it still requests the `{{thinking}}` reviewer). Phase 1 passes `design` only the issue reference, with
    the `— AFK mode` text stripped from its arguments. Phase 2's outcome list drops round cap,
    oscillation-accretion, and growth, and adds escalation.
 3. **Decision pass (new step at the end of Phase 2).** If the loop left any `needs user decision`
@@ -252,13 +268,16 @@ makes", "no per-skill deviation").
 
    The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
    subject `Record AFK decisions for #<number>`.
-4. **Implementation.** Phase 3 passes `<plan path> — autonomous mode` to `implement-and-review`.
+4. **Implementation.** Phase 3 step 1 passes `implement` the plan path (it has no mode argument;
+   AFK has already cleaned the tree), and step 2 invokes `dev-skills:autonomous-branch-review-loop`
+   with `<base> — use the {{thinking}} tier for the reviewer` (no round cap) in place of
+   `branch-review-loop`.
 5. **PR.** Phase 4 passes `pr` `AFK mode` followed by the Decisions taken list gathered so far
    (item 7's sources 1-3 and 5, with the same cap), so the PR body's `## Decisions taken` section
    shows it alongside `pr`'s own defaults.
 6. **Babysit CI (new step between Phase 4 and the final summary).** Once `pr` has pushed the branch and opened the PR,
    invoke the `dev-skills:babysit-pr` skill via the `Skill` tool with the PR URL. It watches CI and dispatches
-   a `sonnet` fixer agent for any failing check, committing and pushing each fix. Its outcome never
+   a `{{coding}}` fixer agent for any failing check, committing and pushing each fix. Its outcome never
    hard-stops the chain — note it (green, or which stop it ended on and any check still red) for
    the report. If `pr` stopped before creating a PR, skip this step.
 7. **Decisions report (in the Phase 5 final summary).** The final summary leads with a **Decisions taken** list. It also
@@ -281,16 +300,17 @@ makes", "no per-skill deviation").
 
 - **Branch up front.** Creating the feature branch in Phase 0 is what keeps the plan commit, every
   review-loop round, and the implementation on one branch. Do not defer branch creation to
-  `implement-and-review` — by then the plan and review commits would already have landed on
+  `implement` — by then the plan and review commits would already have landed on
   `<base>`.
 - **Fail-stop between stages, but only on hard blockers.** Stop and hand back only if `design`
-  produced no plan file at all, if `implement-and-review`'s implementer was blocked, or if `pr`'s
+  produced no plan file at all, if `implement`'s implementer was blocked, or if `pr`'s
   checks failed — never carry a broken chain forward into a PR. Everything short of those (open
   questions, minor review findings, non-clean loop stops) is carried forward, not stopped on. See
   **Autonomy** above.
 - **No AI attribution** on the one commit this skill makes (the plan commit) — and the sub-skills
   already enforce the same for every commit they make.
 - **No restated logic.** Every stage is a direct `Skill` invocation with no per-skill deviation,
-  so a change to any of `design`, `design-review-loop`, `implement-and-review`, or `pr` is
-  inherited here automatically. `implement-and-review` carries this same principle one layer
-  further down for its own review loop — see **Why direct `Skill` invocation** above.
+  so a change to any of `design`, `design-review-loop`, `implement`, `branch-review-loop`, or `pr`
+  is inherited here automatically. Splitting implementation from review (rather than invoking
+  `implement-and-review`) keeps each stage one level below this skill; see **Why direct `Skill`
+  invocation** above.

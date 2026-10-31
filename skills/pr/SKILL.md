@@ -9,6 +9,12 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(mv *), Bash(mkdir *), Bash(ls *), B
 
 Create a pull request for the current branch after running lints/tests and finalizing any associated plan file.
 
+**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,
+mechanical work — pass `model: "sonnet"`. `{{thinking}}` is the tier for judgment — pass
+`model: "opus"`. To run on other models, remap those aliases with Claude Code's
+`ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL`, or swap the two quoted
+values for another alias (`sonnet`, `opus`, `haiku`, `fable`) here.
+
 ## AFK mode
 
 Off by default. When `$ARGUMENTS` requests it (`AFK mode`), never prompt the user: each place
@@ -106,7 +112,7 @@ Update `CHANGELOG.md` with the changes from this branch.
    - **No upstream** (the branch was never pushed, so rewriting its commits is safe): if
      `git merge-base --is-ancestor origin/<base> HEAD` fails, the branch is behind — run
      `git rebase origin/<base>`. On conflicts, spawn a fresh `Task` agent (`general-purpose`,
-     `model: "sonnet"`) with the conflicting files and the instruction to read both sides (and
+     `model` = `{{coding}}`) with the conflicting files and the instruction to read both sides (and
      `git show REBASE_HEAD`), edit the files to keep the intent of **both** changes with no conflict
      markers left, never run `git add`/`git commit`/`git rebase`, and say so instead of guessing if
      the sides genuinely contradict. Then check `git diff --check`, stage the resolved files by
