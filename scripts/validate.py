@@ -19,6 +19,10 @@ Exits non-zero and prints one line per problem found. Checks:
    plugin must use its qualified name (`dev-skills:design`). A bare name can
    resolve to a Claude Code built-in command of the same name (the built-in
    `/design` refuses model invocation).
+7. Model tiers: a skill that uses a `{{coding}}`/`{{thinking}}` placeholder must
+   carry the canonical model-tier declaration byte-for-byte (and vice versa);
+   model names (sonnet, opus, haiku, fable) may appear only in that declaration
+   or a frontmatter `model:` value; unknown `{{...}}` tokens are rejected.
 """
 
 import json
@@ -53,7 +57,8 @@ def check_model_tiers(rel, text):
     """Return problem strings for one skill file (pure; see check 7 above)."""
     problems = []
     has_decl = MODEL_TIERS_DECLARATION in text
-    rest = text.replace(MODEL_TIERS_DECLARATION, "")
+    # Keep the declaration's newlines so reported line numbers match the file.
+    rest = text.replace(MODEL_TIERS_DECLARATION, "\n" * MODEL_TIERS_DECLARATION.count("\n"))
     # A frontmatter `model:` value may be an alias (frontmatter cannot hold a placeholder).
     fm = re.match(r"\A---\n(.*?)\n---\n", rest, re.DOTALL)
     if fm:
