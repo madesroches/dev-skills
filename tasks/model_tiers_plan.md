@@ -32,8 +32,11 @@ Model names are used three ways (grep of `skills/`):
   prose (`:41-44`).
 - No override: the default reviewer inherits the session model. Not a brand reference; unchanged.
 
-Brand names also appear in two frontmatter descriptions (`babysit-pr`, and `implement-and-review`
-says only "a stronger model"), `README.md:15-16,43`, and `ship-issue/SKILL.md:245,261`.
+Brand names also appear in the `babysit-pr` frontmatter description (`implement-and-review`'s says
+only "a stronger model"), `README.md:15-16,43`, and `ship-issue/SKILL.md:261` (the `babysit-pr`
+fixer mention). A grep also finds hits the lists above omit: `babysit-pr:3,11,132`,
+`branch-review-loop:47`, `design-review-loop:47`, and `implement-and-review:23,67,102,106,107,114`
+(including phase headings such as "Phase 1: Implement (sonnet agent)" and "Review loop (opus)").
 
 `implement-and-review/SKILL.md` holds both halves: Phase 0 preflight (plan check, base branch,
 dirty-tree prompt, feature branch, baseline commit, scratch path), Phase 1 implementer agent,
@@ -91,12 +94,18 @@ changes:
 **Implement/review split.**
 - New `skills/implement/SKILL.md` (`argument-hint: "<path to plan file>"`): the current
   `implement-and-review` Phase 0 (steps 1-6, baseline commit message prefixed `implement:`) and
-  Phase 1 verbatim, with the implementer on `{{coding}}`. It does not run the review loop. It
-  resolves `<base>` for its own branch check; callers resolve their own. Blocked
-  implementer: stop and report, as today. No mode argument: AFK callers already clean the tree
-  before invoking it.
+  Phase 1 moved, minus references to the review phase, with the implementer on `{{coding}}`.
+  `autonomous mode` parsing (step 1) stays in the wrapper, and step 2 is trimmed to the base
+  branch `implement` needs for its own branch check; callers resolve their own. It does not run
+  the review loop. No mode argument: AFK callers already clean the tree before invoking it.
+  `implement` ends with a fixed report: on success the commit SHA, a one-line description, the
+  checks run, and manual-verification status; on failure a first line beginning `BLOCKED:`.
+  Callers detect blockage from that line and reuse the report in their summaries. `allowed-tools`
+  are `Read, Write, Bash(git *), Bash(mktemp *), Task, AskUserQuestion`, and the
+  `implement-and-review-impl-commit-msg` scratch filename is renamed for `implement`.
 - `implement-and-review` becomes a wrapper: confirm the plan path, invoke `dev-skills:implement`,
-  stop if it is blocked, resolve `<base>` the way `implement` does (`git symbolic-ref`, falling back
+  stop if its report begins `BLOCKED:` (no separate `git log` confirmation; the report carries the
+  SHA), resolve `<base>` the way `implement` does (`git symbolic-ref`, falling back
   to `main`), then invoke `dev-skills:branch-review-loop` with it, a round cap of 10, and a `{{thinking}}` reviewer (`dev-skills:autonomous-branch-review-loop`, no cap, when its
   arguments request `autonomous mode`), then write the combined summary. It keeps its public
   contract; only its internals shrink. Its `allowed-tools` drop what it no longer uses (`Task`,
@@ -131,12 +140,17 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
 1a. **Split**: create `skills/implement/SKILL.md` from `implement-and-review` Phases 0-1; reduce
    `implement-and-review` to the wrapper described in Design; rewire `ship-issue` stage 3 and its
    AFK variant to call `implement` then the review loop; fix `ship-issue`'s prose and fail-stop
-   wording.
+   wording, including the "four sub-skills" count (:67, :84; becomes five), the "Why direct Skill"
+   rationale (:73-76), the Phase 3 opening (:188-190), AFK step 4 (:255), the Phase 5 summary
+   bullet (:216-217), and the Notes (:284-296); the rationale and Notes are rewritten to describe
+   the `implement` plus `branch-review-loop` stack.
 2. **Declare** the paragraph in `branch-review-loop`, `design-review-loop`, `implement`,
    `implement-and-review`, `babysit-pr`, `pr`, `ship-issue`. Apply to the two loops identically
    (mirror rule).
-3. **Substitute** placeholders in those seven files per the Current State line references; rewrite
-   `babysit-pr` description to be neutral.
+3. **Substitute** placeholders in those seven files: grep every `skills/*/SKILL.md` for
+   sonnet/opus/haiku/fable and clear every hit (headings and frontmatter included; only the
+   `model:` frontmatter value is exempt) rather than working from the Current State line list;
+   rewrite the `babysit-pr` description to be neutral.
 4. **Loops' Phase 0**: reviewer override text accepts a tier name; examples use
    `{{thinking}}`.
 4a. **Ship chain**: `ship-issue` requests a `{{thinking}}` reviewer from its plan loop (both
@@ -189,9 +203,10 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
   explicit thinking reviewer, not by wrapping `design` in a `Task` agent (spawn-depth constraint).
 
 - The round cap of 10 and the `{{thinking}}` reviewer request now live in both `ship-issue` and the
-  `implement-and-review` wrapper. Accepted: `ship-issue` already passes its own cap and reviewer to
-  `design-review-loop`, so this matches the established pattern, and nothing of either loop's
-  process is restated.
+  `implement-and-review` wrapper. Accepted: `ship-issue` already passes a round cap to
+  `design-review-loop` (the `{{thinking}}` reviewer request is new there, mirroring what
+  `implement-and-review` does for the code reviewer), so this matches the established pattern, and
+  nothing of either loop's process is restated.
 - `implement-and-review` stays as a public skill (standalone use, existing habits) rather than
   being removed once `ship-issue` stops calling it.
 
@@ -211,7 +226,7 @@ The check is a pure function `check_model_tiers(rel, text) -> list[str]` so it i
     provider can serve.
 - `ship-issue` already resolves `<base>` in its own Phase 0 (step 3), so the review loop is handed
   that value and `implement` does not need to report it. `implement` still resolves `<base>`
-  itself for its own branch check; the report line is dropped.
+  itself for its own branch check.
 
 ## Documentation
 
