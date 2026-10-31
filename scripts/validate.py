@@ -19,6 +19,10 @@ Exits non-zero and prints one line per problem found. Checks:
    plugin must use its qualified name (`dev-skills:design`). A bare name can
    resolve to a Claude Code built-in command of the same name (the built-in
    `/design` refuses model invocation).
+7. Model tiers: a skill that uses a `{{coding}}`/`{{thinking}}` placeholder must
+   carry the canonical model-tier declaration byte-for-byte (and vice versa);
+   model names (sonnet, opus, haiku, fable) may appear only in that declaration;
+   unknown `{{...}}` tokens are rejected.
 """
 
 import json
@@ -33,7 +37,43 @@ REQUIRED_KEYS = ("name", "description", "argument-hint", "allowed-tools")
 # skill bodies only tell *subagents* to use (WebFetch in verification prompts).
 HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion")
 
+# The one paragraph that binds the placeholders to model aliases. Byte-identical
+# in every skill that uses a placeholder; the only place a model alias may
+# appear in a skill file.
+MODEL_TIERS_DECLARATION = (
+    "**Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,\n"
+    "mechanical work \u2014 pass `model: \"sonnet\"`. `{{thinking}}` is the tier for judgment \u2014 pass\n"
+    "`model: \"opus\"`. To run on other models, remap those aliases with Claude Code's\n"
+    "`ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL`, or swap the two quoted\n"
+    "values for another alias (`sonnet`, `opus`, `haiku`, `fable`) here."
+)
+TIER_PLACEHOLDERS = ("{{coding}}", "{{thinking}}")
+MODEL_WORDS = re.compile(r"\b(?:sonnet|opus|haiku|fable)\b", re.IGNORECASE)
+
 errors = []
+
+
+def check_model_tiers(rel, text):
+    """Return problem strings for one skill file (pure; see check 7 above)."""
+    problems = []
+    has_decl = MODEL_TIERS_DECLARATION in text
+    # Keep the declaration's newlines so reported line numbers match the file.
+    rest = text.replace(MODEL_TIERS_DECLARATION, "\n" * MODEL_TIERS_DECLARATION.count("\n"))
+    uses = any(p in rest for p in TIER_PLACEHOLDERS)
+    if uses and not has_decl:
+        problems.append(f"{rel}: uses a model-tier placeholder without the canonical declaration")
+    if has_decl and not uses:
+        problems.append(f"{rel}: carries the model-tier declaration but never uses a placeholder")
+    for lineno, line in enumerate(rest.splitlines(), 1):
+        for m in MODEL_WORDS.finditer(line):
+            problems.append(
+                f"{rel}:{lineno}: names model '{m.group(0)}' outside the declaration; "
+                "use {{coding}} or {{thinking}}"
+            )
+        for tok in re.findall(r"\{\{[^}]*\}\}", line):
+            if tok not in TIER_PLACEHOLDERS:
+                problems.append(f"{rel}:{lineno}: unknown placeholder token {tok}")
+    return problems
 
 
 def check_qualified_invocations(skill_names, plugin_name):
@@ -87,6 +127,8 @@ def check_skills():
         if fields.get("name") and fields["name"] != dirname:
             err(f"{rel}: frontmatter name '{fields['name']}' != directory '{dirname}'")
         skill_names.append(dirname)
+        for problem in check_model_tiers(rel, text):
+            err(problem)
 
         allowed = fields.get("allowed-tools", "")
         body = text[text.find("---\n", 4) + 4 :]
