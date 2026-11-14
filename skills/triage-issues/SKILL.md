@@ -46,7 +46,7 @@ Parsed from `$ARGUMENTS`:
 
 1. `gh repo view --json nameWithOwner`. If there is no repo or `gh` is not authenticated, say so and stop.
 2. Parse the arguments (above).
-3. Ensure the label exists (`gh label list`); if not, create it with `gh label create <label>`
+3. Ensure the label exists: run `gh label create <label>` and treat an "already exists" error as success (do not rely on `gh label list`, which returns only 30 labels by default)
    (skipped on dry run).
 
 ### Phase 1: Candidates
