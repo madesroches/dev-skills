@@ -22,9 +22,9 @@ Stage hints (plan mode only): `start at plan hardening` (default) and `start at 
 Plan-mode overrides of later steps:
 - **Phase 0 step 2**: skip `gh issue view`. `<title>` = the plan's first `# ` heading with a trailing ` Plan` removed; no number/url.
 - **Step 5 branch slug**: derived from the plan filename (basename, `_plan.md`/`.md` stripped, `_` → `-`, same slugging rules). The "branch name contains the issue number" check becomes "branch name contains the slug"; AFK branch mismatch still takes option (b).
-- **Phase 1** is skipped entirely (no `design`, no `**GitHub Issue**:` injection). If the plan file is untracked or modified, commit it with the Phase 1 step 4 protocol, subject `Add design plan: <title>` (≤ 72 chars); otherwise nothing to commit. Either way, record HEAD after Phase 1 (the plan commit if one was made, else the current tip) as `<plan baseline>`; it replaces `<plan commit>` in AFK item 7's decisions-report source 5 (`git diff -M <plan baseline>..HEAD`) and in the Phase 5 summary. (An untracked plan would otherwise trip the dirty-tree check in downstream skills.) In the dirty-tree check of step 4, the plan file itself is not "unrelated WIP" and is excluded from the stash/prompt.
+- **Phase 1** steps 1–3 (`design` and `**GitHub Issue**:` injection) are skipped; step 4 (commit) runs only if the plan file is untracked or modified: commit it with the Phase 1 step 4 protocol, subject `Add design plan: <title>` (≤ 72 chars); otherwise nothing to commit. Either way, record HEAD after Phase 1 (the plan commit if one was made, else the current tip) as `<plan baseline>`; it replaces `<plan commit>` in AFK item 7's decisions-report source 5 (`git diff -M <plan baseline>..HEAD`) and in the Phase 5 summary. (An untracked plan would otherwise trip the dirty-tree check in downstream skills.) In the dirty-tree check of step 4, the plan file itself is not "unrelated WIP" and is excluded from the stash/prompt.
 - **Commit subjects**: wherever a subject uses `#<number>`, plan mode uses `<title>` (AFK decision pass: `Record AFK decisions for <title>`).
-- **Phase 4/5**: the plan has no `**GitHub Issue**:` line, so `pr` runs its own search and then prompts (AFK: opens without a link); the summary reports the plan path and `<plan baseline>` instead of the issue.
+- **Phase 4/5**: if the plan has no `**GitHub Issue**:` line, `pr` runs its own search and then prompts (AFK: opens without a link); if it has one, `pr` links it as today. The summary reports the plan path and `<plan baseline>` instead of the issue.
 
 Mode handling: the AFK-mode text is stripped first, so a plan path is never mistaken for an issue.
 
@@ -51,7 +51,7 @@ Skills are markdown with no unit-testable logic. `scripts/validate.py` and `scri
 
 ## Manual Verification
 - Run `/ship-issue <issue number>` on a throwaway issue: behavior is unchanged. Not automated: it drives a live GitHub repo and a full agent chain.
-- Run `/ship-auto tasks/<plan>.md`: it starts at hardening with no prompt, `pr` opens without an issue link (AFK), and the branch is named from the plan filename.
+- Run `/ship-auto tasks/<plan>.md`: it starts at hardening with no prompt, `pr` links the issue if the plan has a `**GitHub Issue**:` line, otherwise it runs its own search and opens without a link (AFK), and the branch is named from the plan filename.
 
 ## Decisions
 - Non-AFK plan mode accepts `pr`'s own issue-link prompt rather than suppressing it.
