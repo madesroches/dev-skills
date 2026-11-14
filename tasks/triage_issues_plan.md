@@ -13,8 +13,7 @@ dependency, is high-risk, or is not described well enough for the bot to settle 
   hand to `/ship-auto`.
 - Precedent for the shape: `babysit-pr` and the review loops use a thin orchestrator that does the
   `gh`/`git` work and dispatches fresh `Task` agents on a model tier (`{{coding}}`/`{{thinking}}`)
-  for the actual work. `scripts/validate.py` enforces frontmatter, tier declaration, README/CLAUDE.md
-  coverage, and `allowed-tools` for `Task`.
+  for the actual work. `scripts/validate.py` enforces the skill checks (see Testing Strategy).
 - `validate.py` check 7 requires the canonical "Model tiers" paragraph in any skill using a
   placeholder.
 
@@ -42,11 +41,11 @@ The skill is autonomous (no prompts) and only ever adds the label, except with `
 - *Phase 0, preflight.* `gh repo view` (fail if no repo / not authenticated). Parse arguments.
   Ensure the label exists (`gh label list`); if not, create it with `gh label create` (skipped on
   dry run).
-- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,createdAt,...`
+- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,createdAt,closedByPullRequestsReferences`
   with a high `--limit` (all open issues). Drop, without a judge: issues already carrying the label (unless
   `recheck`), pull requests, and issues that are assigned or have an open linked PR (someone is on
   it). For each remaining issue the orchestrator pre-fetches the **native dependency data**:
-  `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` and the parent/sub-issue relation.
+  `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` and `gh api repos/{owner}/{repo}/issues/N/sub_issues` for sub-issues.
   An issue with an open native blocker or open sub-issues is dropped here without a judge and
   reported as not-ready/`dependency` or as a tracking issue. The rest are sorted oldest first and
   capped at `limit`; the remainder is reported as "over limit".
@@ -127,7 +126,6 @@ matter to be already made).
 ## Decisions
 - Default label `bot-ready`, overridable per run, so the skill fits repos with their own naming.
 - Never removes a label unless `recheck` is given, since humans may have applied it by hand.
-- Ambiguity on UX, dependency, or risk resolves to `not-ready`; the cost asymmetry is stated in rubric 5.
 - High-risk issues are never `bot-ready`, however well specified (user call). Their category list is
   the rubric's, stated once there.
 
@@ -151,6 +149,6 @@ Judgment quality cannot be unit tested, and a bad verdict is visible in the repo
    show reasons `ux`, `dependency`, `high-risk`, `underspecified`; no labels changed.
 2. Run `/dev-skills:triage-issues`. Expected: the label is created if missing and `gh issue list --label bot-ready` shows
    exactly the ready issue.
-3. Close the blocker, run again with `recheck`. Expected: the dependency-blocked issue is now
+3. Close the blocker, run again without `recheck`. Expected: the dependency-blocked issue is now
    assessed on its merits; if it is `not-ready` for another reason the report says so.
 
