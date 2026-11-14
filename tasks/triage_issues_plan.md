@@ -34,7 +34,7 @@ The skill is autonomous (no prompts) and only ever adds the label, except with `
   run in parallel batches of 5. One agent per issue keeps verdicts independent. A judge reads the
   issue, **all** its comments (they often resolve or reopen decisions), and the code areas it
   touches, and returns a verdict. The orchestrator fetches each issue's body and comments
-  (`gh issue view N --comments`) and passes them in the judge prompt. The judge edits nothing and
+  (`gh issue view N --json title,body,labels,comments`) and passes them in the judge prompt. The judge edits nothing and
   does not touch GitHub.
 
 **Process.**

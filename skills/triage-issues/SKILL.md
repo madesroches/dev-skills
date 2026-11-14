@@ -64,7 +64,7 @@ Parsed from `$ARGUMENTS`:
 
 ### Phase 2: Judging
 
-For each candidate, fetch `gh issue view N --comments` and spawn a judge (batches of 5 in parallel)
+For each candidate, fetch `gh issue view N --json title,body,labels,comments` and spawn a judge (batches of 5 in parallel)
 with the issue number, the issue body and all comments, and the prompt below. Judges reply with the
 record defined in the prompt.
 
