@@ -2,7 +2,7 @@
 name: triage-issues
 description: Scan a project's open GitHub issues and label the ones a conservative implementation bot can complete without guessing
 argument-hint: "[— label NAME] [— limit N] [— recheck] [— dry run]"
-allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Bash(gh api repos/*), Read, Task
+allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Read, Task
 ---
 
 # Triage Issues — Label What a Bot Can Ship
@@ -51,21 +51,20 @@ Parsed from `$ARGUMENTS`:
 
 ### Phase 1: Candidates
 
-1. `gh issue list --state open --json number,title,labels,assignees,createdAt,closedByPullRequestsReferences`
+1. `gh issue list --state open --json number,title,labels,assignees,createdAt,closedByPullRequestsReferences,blockedBy,subIssuesSummary`
    with a high `--limit` (all open issues).
-2. Drop, without a judge: issues already carrying the label (unless `recheck`), pull requests, and
+2. Drop, without a judge: issues already carrying the label (unless `recheck`), and
    issues that are assigned or have an open linked PR (someone is on it).
-3. For each remaining issue, pre-fetch the **native dependency data**:
-   `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` and
-   `gh api repos/{owner}/{repo}/issues/N/sub_issues`. An issue with an open native blocker is dropped
-   here without a judge and reported as not-ready / `dependency`; one with open sub-issues is dropped
+3. Use the **native dependency data** from the list call (no per-issue calls). An issue whose
+   `blockedBy` has an open blocker is dropped here without a judge and reported as not-ready /
+   `dependency`; one whose `subIssuesSummary` shows open sub-issues (`total` > `completed`) is dropped
    and reported as a tracking issue.
 4. Sort the rest oldest first and cap at `limit`; report the remainder as "over limit".
 
 ### Phase 2: Judging
 
 For each candidate, fetch `gh issue view N --json title,body,labels,comments` and spawn a judge (batches of 5 in parallel)
-with the issue number, the issue body and all comments, and the prompt below. Judges reply with the
+with the issue number, title, labels, body and all comments, and the prompt below. Judges reply with the
 record defined in the prompt.
 
 **Judge prompt.** Pass this to each judge, filling in the issue:
@@ -134,5 +133,6 @@ user's feedback on how to make an issue bot-ready.
 - **Facts are fetched, not inferred.** Whether a blocker is open or closed is checked by the
   orchestrator, never trusted from the judge.
 - **Never removes a label without `recheck`**, since humans may have applied it by hand.
-- **`gh api` is GET-only** here: dependency and sub-issue lookups, never a mutation.
+- **Dependency data comes from `gh issue list --json`** (`blockedBy`, `subIssuesSummary`), so no
+  `gh api` access is needed and per-issue cost is only the judge.
 - **High-risk issues are never labeled**, however well specified.

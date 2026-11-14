@@ -39,17 +39,16 @@ The skill is autonomous (no prompts) and only ever adds the label, except with `
 
 **Process.**
 - *Phase 0, preflight.* `gh repo view` (fail if no repo / not authenticated). Parse arguments.
-  Ensure the label exists (`gh label list`); if not, create it with `gh label create` (skipped on
-  dry run).
-- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,createdAt,closedByPullRequestsReferences`
+  Ensure the label exists by running `gh label create <label>` and treating an "already exists"
+  error as success (`gh label list` returns only 30 labels) (skipped on dry run).
+- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,createdAt,closedByPullRequestsReferences,blockedBy,subIssuesSummary`
   with a high `--limit` (all open issues). Drop, without a judge: issues already carrying the label (unless
-  `recheck`), pull requests, and issues that are assigned or have an open linked PR (someone is on
-  it). For each remaining issue the orchestrator pre-fetches the **native dependency data**:
-  `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` and `gh api repos/{owner}/{repo}/issues/N/sub_issues` for sub-issues.
+  `recheck`), and issues that are assigned or have an open linked PR (someone is on
+  it). The **native dependency data** comes from the same list call (`blockedBy`, `subIssuesSummary`); no per-issue calls.
   An issue with an open native blocker or open sub-issues is dropped here without a judge and
   reported as not-ready/`dependency` or as a tracking issue. The rest are sorted oldest first and
   capped at `limit`; the remainder is reported as "over limit".
-- *Phase 2, judging.* Each judge gets the issue number, the issue body and comments, and the rubric below, and replies
+- *Phase 2, judging.* Each judge gets the issue number, title, labels, body and comments, and the rubric below, and replies
   with a fixed record: `number`, `verdict` (`ready`/`not-ready`), `reason` (`ux` | `dependency` |
   `high-risk` | `underspecified` | `other`), `why` (one sentence), `blockers` (issue numbers the text says this
   depends on, including prose like "after #12", "needs #7", "once X lands"), and for `ready` a
@@ -93,9 +92,9 @@ matter to be already made).
 
 ## Implementation Steps
 1. Create `skills/triage-issues/SKILL.md`: frontmatter (`name: triage-issues`, `description`,
-   `argument-hint`, `allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Bash(gh api repos/*), Read, Task`), the canonical Model tiers paragraph copied
+   `argument-hint`, `allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Read, Task`), the canonical Model tiers paragraph copied
    byte-for-byte from another carrier (e.g. `babysit-pr`), then Roles, Process (phases above),
-   judge prompt with rubric and record format, and Notes (stating `gh api` use is GET-only).
+   judge prompt with rubric and record format, and Notes (stating dependency data comes from `gh issue list --json`, so no `gh api`).
 2. `README.md`: add a `/triage-issues` row to the skill table, positioned before `/ship-issue`, and
    a sentence that it prepares issues for `/ship-auto`; update any skill count in prose.
 3. `CLAUDE.md`: "thirteen" → "fourteen" slash-command skills and add `/triage-issues` to the list;
