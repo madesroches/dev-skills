@@ -15,6 +15,7 @@ Development workflow skills for Claude Code: PR creation, design planning, and c
 | `/implement` | Implement a design plan in full and commit it, without a review pass |
 | `/implement-and-review` | `/implement`, then iteratively review and fix the branch with a stronger model until it converges |
 | `/babysit-pr` | Watch a PR's CI until it passes, dispatching a fixer agent to repair any failing checks |
+| `/triage-issues` | Scan open GitHub issues and label the ones a conservative bot can complete without guessing (`bot-ready`), preparing them for `/ship-auto` |
 | `/ship-issue` | Take a GitHub issue through design, plan review, implementation, independent review, and a pull request in one chain |
 | `/autonomous-branch-review-loop` | `/branch-review-loop` with no round cap, each substantive finding's severity challenged, and trivial issues fixed in the round they appear |
 | `/autonomous-design-review-loop` | `/design-review-loop` with no round cap, each substantive finding's severity challenged, and trivial issues fixed in the round they appear |

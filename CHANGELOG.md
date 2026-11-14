@@ -2,6 +2,15 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.33.0] - 2026-11-14
+
+Issue triage for the ship chain.
+
+- New `/triage-issues`: scans open GitHub issues and applies a `bot-ready` label (overridable) to the ones a
+  conservative bot (`/ship-issue`, `/ship-auto`) can complete without guessing. One `{{thinking}}` judge per
+  issue rules out UX work, unmet dependencies, high-risk changes, and underspecified issues; the orchestrator
+  verifies blocker state. Supports `limit`, `recheck`, and `dry run`.
+
 ## [1.32.0] - 2026-10-31
 
 Skills name models by role, and implementation is split from review in the ship chain.
