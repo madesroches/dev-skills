@@ -1,7 +1,7 @@
 ---
 name: ship-issue
-description: Take a GitHub issue from design through review, implementation, and a pull request in one autonomous chain
-argument-hint: "<issue url or number>"
+description: Take a GitHub issue or an existing plan through review, implementation, and a pull request in one autonomous chain
+argument-hint: "<issue url or number | plan path> [start at plan hardening|implementation]"
 allowed-tools: Skill, Task, Bash(git *), Bash(gh issue view *), Bash(mktemp *), Read, Edit, Write, AskUserQuestion
 ---
 
@@ -11,6 +11,10 @@ Take the GitHub issue at `$ARGUMENTS` all the way to a pull request by sequencin
 existing skills: write a design plan (`design`) and commit it, harden that plan
 (`design-review-loop`), implement it (`implement`), review the result independently
 (`branch-review-loop`), then finalize and open the PR (`pr`).
+
+`$ARGUMENTS` may instead be the path to an **existing plan file** (`tasks/*.md`): that is **plan
+mode** (see `## Plan mode`), which skips the issue fetch and the `design` stage and starts at plan
+hardening (or at implementation, on request).
 
 **Model tiers.** This skill names models by role. `{{coding}}` is the tier for well-specified,
 mechanical work — pass `model: "sonnet"`. `{{thinking}}` is the tier for judgment — pass
@@ -32,7 +36,7 @@ yield the turn to the user between phases. A brief summary of a stage's outcome 
 must be immediately followed by the next stage; it is never a place to stop and wait.
 
 The **only** things that stop the chain are the hard blockers enumerated per phase: no issue
-reference given, the issue can't be fetched, `design` produced **no plan file at all**,
+reference or plan path given, the issue can't be fetched, `design` produced **no plan file at all**,
 `implement`'s implementer was **blocked**, or `pr`'s checks failed. Nothing else halts
 it. In particular:
 
@@ -63,7 +67,7 @@ an explicit push instruction (e.g. "and push", "push and open the PR"). If it do
 fully autonomous through the PR — say nothing about it. If it does **not**, emit a one-line reminder
 before proceeding: that the chain will run straight through, but the final push may be gated unless
 they've explicitly asked for it, and that re-invoking with an explicit push instruction (e.g.
-`/ship-issue <issue> — push and open the PR when done`) makes the whole run, push included,
+`/ship-issue <issue or plan path> — push and open the PR when done`) makes the whole run, push included,
 autonomous. Then **continue the chain anyway without pausing** — do not wait for a reply. If the
 push does end up gated at Phase 4, `pr` stops there with the branch and all commits intact, and the
 user already knows why and how to avoid it next time.
@@ -91,7 +95,7 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
 - **Orchestrator** — this skill, in the main context. Sequences the five sub-skills, does the
   git/`gh` connective work, commits the plan once, and writes the final summary. It does not
   design, review, implement, or open the PR itself.
-- **`design`** — invoked with the issue reference. Researches the codebase and writes the plan
+- **`design`** — invoked with the issue reference (not run in plan mode). Researches the codebase and writes the plan
   document. Produces no code.
 - **`design-review-loop`** — invoked with the plan path, a round cap of 10 (double its own
   default), and a request for the `{{thinking}}` tier for its reviewer. Autonomously reviews and fixes the plan until it converges, committing each round,
@@ -107,13 +111,20 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
 
 ### Phase 0: Preflight
 
-1. Confirm `$ARGUMENTS` is provided and looks like a GitHub issue reference (a full issue URL or
-   an issue number). If missing, say so and stop — do not invent an issue. If the arguments
-   also request `AFK mode` (e.g. `<issue> — AFK mode`), the overrides in `## AFK mode` below
-   apply; it is off by default.
+1. **Input resolution.** First strip the `— AFK mode` text and any push instruction from
+   `$ARGUMENTS`. If the arguments requested `AFK mode` (e.g. `<issue> — AFK mode`), the overrides
+   in `## AFK mode` below apply; it is off by default. Then, on the remaining text:
+   1. If it contains a path to an existing file (`tasks/*.md`, checked with `Read` of the path),
+      this is **plan mode**: `<plan path>` is that file, and any remaining text is a stage hint.
+      The overrides in `## Plan mode` below apply.
+   2. Else if it looks like a GitHub issue reference (a full issue URL or an issue number), this is
+      **issue mode** — the process below exactly as written.
+   3. Else (missing or unrecognized), say that the accepted forms are an issue URL/number or a
+      path to an existing plan file, and stop — do not invent an issue, and do not scan `tasks/`
+      for a plan.
    Then apply the **Autonomous push** check above: if the invocation carries no explicit push
    instruction, emit the one-line reminder now, before proceeding — and continue without pausing.
-2. Confirm the issue exists and capture its metadata:
+2. (Issue mode; plan mode skips this step.) Confirm the issue exists and capture its metadata:
    `gh issue view <issue> --json number,title,url`. If the command fails (bad number, wrong repo,
    not authenticated), report the error and stop. Keep the issue's **number**, **title**, and
    **url** — they are used for the branch slug, the plan's issue link, and the plan commit subject.
@@ -136,7 +147,7 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
    issue number? If it does, skip branch creation and work on it directly. If it does not, ask
    with AskUserQuestion (this is preflight — the no-pausing rule applies only once the chain is
    running) whether to (a) continue on the current branch anyway, (b) create the issue's feature
-   branch off `<base>` (`git checkout -b <slug> <base>`) and work there, or (c) stop — otherwise
+   branch off `<base>` (`git checkout -b <slug> <base>`; plan mode: off the current HEAD instead if the plan file is tracked here but absent on `<base>`) and work there, or (c) stop — otherwise
    the whole chain (plan, review rounds, implementation, PR) could silently pile onto a branch
    made for unrelated work.
 6. If step 4 called for a baseline commit, make it now, on top of the branch from step 5: stage by
@@ -150,6 +161,8 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
    Use this exact path as `<plan commit msg path>`.
 
 ### Phase 1: Design the plan, then commit it
+
+(Plan mode: steps 1-3 are skipped and step 4 is conditional — see `## Plan mode`.)
 
 1. Invoke the `dev-skills:design` skill via the `Skill` tool, passing the **issue reference** (`$ARGUMENTS`)
    as its arguments. Let it fetch the issue and write the plan; do not pre-empt its research.
@@ -177,6 +190,8 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
    Run `git add` and `git commit` as separate calls.
 
 ### Phase 2: Harden the plan
+
+(Plan mode with the `start at implementation` hint: skip this phase.)
 
 Invoke the `dev-skills:design-review-loop` skill via the `Skill` tool, passing the **plan path** followed by
 an instruction to use a round cap of **10** instead of its own default of 5 (e.g. `<plan path> —
@@ -223,7 +238,8 @@ and all commits are intact; the user (or a follow-up run) can fix and re-run `/p
 ### Phase 5: Final summary
 
 Report the whole chain concisely:
-- The issue (number + title) and the branch it was shipped on.
+- The issue (number + title) and the branch it was shipped on (plan mode: the plan path and
+  `<plan baseline>` instead of the issue).
 - The plan file path and its commit.
 - `design-review-loop`'s outcome (converged, or which stopping condition fired), the plan-size
   trajectory it reported, what its finalize pass cleared, and anything it left for the user —
@@ -247,7 +263,8 @@ makes", "no per-skill deviation").
      of asking. This keeps unrelated WIP out of the PR; the user can restore it with
      `git stash pop`. Skip step 6's baseline commit.
    - Branch mismatch (Phase 0 step 5): take option (b), creating the issue's feature branch off
-     `<base>`.
+     `<base>` (plan mode: off the current HEAD when the plan is committed only on the current
+     branch — see `## Plan mode` item 2).
    - The **Autonomy** section's "hard requirement for the user's judgment" exception is disabled.
      Take the most conservative option instead, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
@@ -267,7 +284,8 @@ makes", "no per-skill deviation").
    - Return the lines it wrote.
 
    The orchestrator commits the plan with the same `-F` protocol as Phase 1 step 4, with the
-   subject `Record AFK decisions for #<number>`.
+   subject `Record AFK decisions for #<number>` (plan mode: `Record AFK decisions for <title>`).
+   In plan mode with `start at implementation`, this pass is skipped.
 4. **Implementation.** Phase 3 step 1 passes `implement` the plan path (it has no mode argument;
    AFK has already cleaned the tree), and step 2 invokes `dev-skills:autonomous-branch-review-loop`
    with `<base> — use the {{thinking}} tier for the reviewer` (no round cap) in place of
@@ -291,10 +309,43 @@ makes", "no per-skill deviation").
    4. `pr`'s `Decisions taken (AFK mode):` list.
    5. The other `## Decisions` lines the plan gained during the run. Read the plan at whichever
       path it currently has (`tasks/` or `tasks/completed/`, since `pr` moves it), and find the
-      added lines with `git diff -M <plan commit>..HEAD` over both paths.
+      added lines with `git diff -M <plan commit>..HEAD` over both paths (plan mode:
+      `<plan baseline>` in place of `<plan commit>`).
 
    List sources 1-4 in full. Cap source 5 at 10 lines; if entries were cut, end with a pointer to
    the plan's `## Decisions` section, the only place the full record of source 5 lives.
+
+## Plan mode
+
+Enabled when Phase 0 step 1 resolves the arguments to an existing plan file. It skips the issue
+fetch and the `design` stage and starts at plan hardening. These overrides apply on top of the
+process above, and combine with AFK mode.
+
+**Stage hints** (the text left after the plan path): `start at plan hardening` (default) and
+`start at implementation`, which skips Phase 2 and the AFK decision pass — the plan is assumed
+already hardened. Unrecognized hint text is ignored.
+
+1. **Title.** Phase 0 step 2 is skipped (no `gh issue view`). `<title>` is the plan's first `# `
+   heading with a trailing ` Plan` removed; there is no issue number or url.
+2. **Branch.** Phase 0 step 5's slug is derived from the plan filename: the basename with
+   `_plan.md` or `.md` stripped and `_` turned into `-`, then slugged by the same rules. The
+   "branch name contains the issue number" check becomes "branch name contains the slug"; AFK
+   branch mismatch still takes option (b). Exception: if the plan file is tracked on the current
+   branch but absent on `<base>` (committed only here), option (b) branches off the current HEAD
+   (`git checkout -b <slug>`) instead of off `<base>`, so the plan comes along.
+3. **Dirty tree.** In Phase 0 step 4 the plan file itself is not "unrelated WIP": exclude it from
+   the prompt and from the AFK stash.
+4. **Phase 1.** Steps 1-3 (`design` and the `**GitHub Issue**:` injection) are skipped. Step 4
+   (commit) runs only if the plan file is untracked or modified: commit it with the Phase 1
+   step 4 protocol, subject `Add design plan: <title>` (≤ 72 chars). Otherwise there is nothing to
+   commit. Either way, record HEAD after Phase 1 (the plan commit if one was made, else the
+   current tip) as `<plan baseline>`; it stands in for `<plan commit>` in the AFK decisions
+   report and in the Phase 5 summary. (An untracked plan would otherwise trip the dirty-tree
+   check in downstream skills.)
+5. **Commit subjects.** Wherever a subject uses `#<number>`, plan mode uses `<title>`.
+6. **Phases 4-5.** If the plan has no `**GitHub Issue**:` line, `pr` runs its own issue search and
+   then prompts (AFK: opens without a link); if it has one, `pr` links it as usual. Non-AFK plan
+   mode accepts `pr`'s own prompt rather than suppressing it.
 
 ## Notes
 

@@ -2,6 +2,15 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.34.0] - 2026-11-14
+
+Ship an existing plan.
+
+- `/ship-issue` and `/ship-auto` accept a path to an existing plan file (`tasks/*.md`) instead of an
+  issue: they skip the issue fetch and `design` and start at plan hardening, or at implementation with
+  the `start at implementation` hint. The branch is named from the plan filename, and `pr` links an
+  issue only if the plan carries a `**GitHub Issue**:` line.
+
 ## [1.33.0] - 2026-11-14
 
 Issue triage for the ship chain.
