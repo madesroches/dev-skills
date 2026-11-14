@@ -22,7 +22,7 @@ dependency, is high-risk, or is not described well enough for the bot to settle 
 
 **Name and arguments.** `skills/triage-issues/SKILL.md`, `argument-hint: "[— label NAME] [— limit N] [— recheck] [— dry run]"`.
 - `label NAME` — label to apply, default `bot-ready`.
-- `limit N` — max issues assessed per run, default 30 (each costs a thinking-tier agent).
+- `limit N` — max issues judged per run, default 30 (each costs a thinking-tier agent); applied after filtering, oldest first.
 - `recheck` — also re-assess issues that already carry the label.
 - `dry run` — report verdicts, change nothing on GitHub.
 
@@ -34,26 +34,30 @@ The skill is autonomous (no prompts) and only ever adds the label, except with `
 - **Judge agent**: one fresh `Task` agent per issue (`general-purpose`, `model` = `{{thinking}}`),
   run in parallel batches of 5. One agent per issue keeps verdicts independent. A judge reads the
   issue, **all** its comments (they often resolve or reopen decisions), and the code areas it
-  touches, and returns a verdict. It edits nothing and does not touch GitHub.
+  touches, and returns a verdict. The orchestrator fetches each issue's body and comments
+  (`gh issue view N --comments`) and passes them in the judge prompt. The judge edits nothing and
+  does not touch GitHub.
 
 **Process.**
 - *Phase 0, preflight.* `gh repo view` (fail if no repo / not authenticated). Parse arguments.
   Ensure the label exists (`gh label list`); if not, create it with `gh label create` (skipped on
   dry run).
-- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,...`
-  up to `limit`, oldest first. Drop, without a judge: issues already carrying the label (unless
+- *Phase 1, candidates.* `gh issue list --state open --json number,title,labels,assignees,createdAt,...`
+  with a high `--limit` (all open issues). Drop, without a judge: issues already carrying the label (unless
   `recheck`), pull requests, and issues that are assigned or have an open linked PR (someone is on
   it). For each remaining issue the orchestrator pre-fetches the **native dependency data**:
-  `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` (open blockers → unmet) and the
-  parent/sub-issue relation; an issue with open sub-issues is a tracking issue and is out.
-- *Phase 2, judging.* Each judge gets the issue number, the repo, and the rubric below, and replies
+  `gh api repos/{owner}/{repo}/issues/N/dependencies/blocked_by` and the parent/sub-issue relation.
+  An issue with an open native blocker or open sub-issues is dropped here without a judge and
+  reported as not-ready/`dependency` or as a tracking issue. The rest are sorted oldest first and
+  capped at `limit`; the remainder is reported as "over limit".
+- *Phase 2, judging.* Each judge gets the issue number, the issue body and comments, and the rubric below, and replies
   with a fixed record: `number`, `verdict` (`ready`/`not-ready`), `reason` (`ux` | `dependency` |
   `high-risk` | `underspecified` | `other`), `why` (one sentence), `blockers` (issue numbers the text says this
   depends on, including prose like "after #12", "needs #7", "once X lands"), and for `ready` a
   `decisions-covered` line naming the non-obvious decisions the issue already settles. The record
   format is stated once, in the skill's judge prompt.
-- *Phase 3, dependency check.* The orchestrator runs `gh issue view` on each judge-reported blocker
-  and on native blockers; any still open flips the verdict to `not-ready` / `dependency`. Verdicts
+- *Phase 3, dependency check.* The orchestrator runs `gh issue view` on each judge-reported blocker;
+  any still open flips the verdict to `not-ready` / `dependency`. Verdicts
   are never flipped the other way. Prose blockers that name no issue number (e.g. "once the API
   lands") are the judge's to weigh: it must treat an unresolved, unnamed prerequisite as `dependency`.
 - *Phase 4, apply.* `gh issue edit N --add-label <label>` for each `ready`. With `recheck`, a
@@ -88,15 +92,11 @@ matter to be already made).
 5. When in doubt, `not-ready`. A missed ready issue costs one more triage; a wrongly labeled one
    costs a bot's wasted run and a bad PR.
 
-**Why only `{{thinking}}` judges.** Eligibility is the judgment the user asked the stronger model
-to own; the orchestrator's mechanical work (listing, API calls, labeling) needs none.
-
 ## Implementation Steps
 1. Create `skills/triage-issues/SKILL.md`: frontmatter (`name: triage-issues`, `description`,
-   `argument-hint`, `allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Bash(gh api *), Read, Task`), the canonical Model tiers paragraph copied
+   `argument-hint`, `allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(gh issue edit *), Bash(gh label *), Bash(gh repo view *), Bash(gh api repos/*), Read, Task`), the canonical Model tiers paragraph copied
    byte-for-byte from another carrier (e.g. `babysit-pr`), then Roles, Process (phases above),
-   judge prompt with rubric and record format, and Notes. No AI attribution concerns (it makes no
-   commits).
+   judge prompt with rubric and record format, and Notes (stating `gh api` use is GET-only).
 2. `README.md`: add a `/triage-issues` row to the skill table, positioned before `/ship-issue`, and
    a sentence that it prepares issues for `/ship-auto`; update any skill count in prose.
 3. `CLAUDE.md`: "thirteen" → "fourteen" slash-command skills and add `/triage-issues` to the list;
