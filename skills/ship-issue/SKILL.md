@@ -1,6 +1,6 @@
 ---
 name: ship-issue
-description: Take a GitHub issue from design through review, implementation, and a pull request in one autonomous chain
+description: Take a GitHub issue or an existing plan through review, implementation, and a pull request in one autonomous chain
 argument-hint: "<issue url or number | plan path> [start at plan hardening|implementation]"
 allowed-tools: Skill, Task, Bash(git *), Bash(gh issue view *), Bash(mktemp *), Read, Edit, Write, AskUserQuestion
 ---
@@ -147,7 +147,7 @@ the built-in `/design` refuses model invocation, which stopped the chain at Phas
    issue number? If it does, skip branch creation and work on it directly. If it does not, ask
    with AskUserQuestion (this is preflight — the no-pausing rule applies only once the chain is
    running) whether to (a) continue on the current branch anyway, (b) create the issue's feature
-   branch off `<base>` (`git checkout -b <slug> <base>`) and work there, or (c) stop — otherwise
+   branch off `<base>` (`git checkout -b <slug> <base>`; plan mode: off the current HEAD instead if the plan file is tracked here but absent on `<base>`) and work there, or (c) stop — otherwise
    the whole chain (plan, review rounds, implementation, PR) could silently pile onto a branch
    made for unrelated work.
 6. If step 4 called for a baseline commit, make it now, on top of the branch from step 5: stage by
@@ -263,7 +263,8 @@ makes", "no per-skill deviation").
      of asking. This keeps unrelated WIP out of the PR; the user can restore it with
      `git stash pop`. Skip step 6's baseline commit.
    - Branch mismatch (Phase 0 step 5): take option (b), creating the issue's feature branch off
-     `<base>`.
+     `<base>` (plan mode: off the current HEAD when the plan is committed only on the current
+     branch — see `## Plan mode` item 2).
    - The **Autonomy** section's "hard requirement for the user's judgment" exception is disabled.
      Take the most conservative option instead, and note the choice as it is made.
    - The **Autonomous push** reminder is still emitted at the start, without pausing.
@@ -329,7 +330,9 @@ already hardened. Unrecognized hint text is ignored.
 2. **Branch.** Phase 0 step 5's slug is derived from the plan filename: the basename with
    `_plan.md` or `.md` stripped and `_` turned into `-`, then slugged by the same rules. The
    "branch name contains the issue number" check becomes "branch name contains the slug"; AFK
-   branch mismatch still takes option (b).
+   branch mismatch still takes option (b). Exception: if the plan file is tracked on the current
+   branch but absent on `<base>` (committed only here), option (b) branches off the current HEAD
+   (`git checkout -b <slug>`) instead of off `<base>`, so the plan comes along.
 3. **Dirty tree.** In Phase 0 step 4 the plan file itself is not "unrelated WIP": exclude it from
    the prompt and from the AFK stash.
 4. **Phase 1.** Steps 1-3 (`design` and the `**GitHub Issue**:` injection) are skipped. Step 4
