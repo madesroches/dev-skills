@@ -1,7 +1,7 @@
 ---
 name: ship-auto
 description: Take a GitHub issue from design to a pull request without ever prompting, then report the decisions taken on your behalf
-argument-hint: "<issue url or number>"
+argument-hint: "<issue url or number | plan path> [start at plan hardening|implementation]"
 allowed-tools: Skill
 ---
 
