@@ -2,6 +2,17 @@
 
 All notable changes to the `dev-skills` plugin are documented in this file.
 
+## [1.35.0] - 2026-11-25
+
+Quieter CI watching in `babysit-pr`.
+
+- `babysit-pr` watches CI with `Monitor` running a quiet poll loop that prints one line per state change
+  (`FAILED: <name>`, `ALL DONE: ...`, `NO CHECKS`) instead of `gh pr checks --watch`, which reprinted the
+  full table every 10 seconds. `--watch` remains the fallback when `Monitor` is unavailable.
+- New rule: a still-running watch (unexpired Monitor, or a Bash command moved to the background) is not a
+  failure and is never cancelled and restarted.
+- `scripts/validate.py` treats `Monitor` as a heuristic tool that must be declared in `allowed-tools`.
+
 ## [1.34.0] - 2026-11-14
 
 Ship an existing plan.
