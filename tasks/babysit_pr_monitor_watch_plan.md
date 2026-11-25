@@ -11,7 +11,7 @@
 - Phase 1 step 2 reads `gh pr checks <pr> --json name,state,link,workflow` and branches on: no checks (wait ~60 s, look once more, else **no CI**), all passed, any failed. On failure it waits for the remaining checks with a second `gh pr checks <pr> --watch` (line 61) so one fixer pass sees every failure.
 - Phase 2 step 7 returns to Phase 1 after a ~30 second pause.
 - `scripts/validate.py:38` `HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion")`: a capitalized tool name in a skill body must appear in `allowed-tools`.
-- `gh pr checks --json` exposes a `bucket` field (`pass`, `fail`, `pending`, `skipping`, `cancel`). `gh pr checks` exits non-zero while checks are pending or failing but still prints the JSON.
+- `gh pr checks --json` exposes a `bucket` field (`pass`, `fail`, `pending`, `skipping`, `cancel`). With `--json`, `gh pr checks` exits 0 whether checks pass or fail (and, per its code path, while pending); with no checks it exits 1 with an error on stderr and empty stdout.
 - Monitor contract: each stdout line is one event; the command's exit ends the watch; `timeout_ms` defaults to 300000 and is capped at 1800000; on expiry the monitor is killed and one notice is sent, and the caller re-arms.
 
 ## Design
@@ -31,7 +31,7 @@ while true; do
     any=1; empty=0; d=""
     while IFS= read -r l; do
       case "$l" in
-        "F "*) n=${l#F }; grep -qxF "$n" <<<"$seen" || { echo "FAILED: $n"; seen="$seen"$'\n'"$n"; } ;;
+        "F "*) n=${l#F }; grep -qxF -- "$n" <<<"$seen" || { echo "FAILED: $n"; seen="$seen"$'\n'"$n"; } ;;
         "DONE "*) d=${l#DONE } ;;
       esac
     done <<<"$s"
@@ -46,11 +46,11 @@ Behavior:
 - One `FAILED: <name>` line per newly failed or cancelled check, the poll it is first seen — so an early failure is reported without waiting for slower checks.
 - One `ALL DONE: <bucket counts>` line when no check is pending, then the loop exits, ending the watch.
 - `NO CHECKS` after three consecutive empty polls (~60 s) if no check was ever seen; a transient `gh` error after checks were seen is treated as a skipped poll, not as "no checks".
-- Flushing: every event is written by `echo` from the loop's own shell, and the only filters (`gh --jq`, `grep -q`) are per-poll processes that exit, so no long-lived pipe stage holds output in a buffer. The skill states the rule so a later edit does not add one: any long-lived filter added to the loop must flush per line (`grep --line-buffered`, `awk` with `fflush()`).
+- Flushing: any long-lived filter added to the loop must flush per line (`grep --line-buffered`, `awk` with `fflush()`).
 
 Orchestrator handling of events:
 - `FAILED:` — the existing "wait for the rest so one fixer pass sees everything" rule applies: keep the same monitor armed until its `ALL DONE` line (it replaces the second `--watch` on line 61). The orchestrator may fetch the failed check's log (Phase 2 step 2) while waiting.
-- `ALL DONE` / `NO CHECKS` — proceed to step 2, which re-reads `gh pr checks --json name,state,link,workflow` and applies the existing branches unchanged (the `NO CHECKS` line stands in for the first of its two looks).
+- `ALL DONE` / `NO CHECKS` — proceed to step 2, which re-reads `gh pr checks --json name,state,link,workflow` and applies the existing branches unchanged, except that after `NO CHECKS` step 2's single re-read is the second look, with no further 60-second wait. If that re-read fails with a `gh` error other than "no checks reported", the orchestrator reports that error and does not report **no CI**.
 - **Deadline notice** — the monitor expired with checks still pending: re-arm it with the same command. Each expiry with no `ALL DONE` counts as one consecutive timeout against the existing cap of **6**; at the cap, stop with outcome **still pending**. Re-arming restarts the loop's `seen` set, so a check already reported may print `FAILED:` again; that is a repeat, not a new failure.
 
 ### Never cancel a healthy watch
@@ -67,7 +67,7 @@ When the `Monitor` tool is unavailable (not offered by the harness), use the cur
 1. `skills/babysit-pr/SKILL.md`:
    - Add `Monitor` to `allowed-tools`.
    - Rewrite Phase 1 step 1 per **Primary path** (loop, `timeout_ms`, event handling, re-arm and cap), followed by the **Never cancel a healthy watch** rule and the **Fallback** paragraph.
-   - In Phase 1 step 2's failure branch, replace "wait for them too (`gh pr checks <pr> --watch`)" with "keep the step 1 watch running until it reports all done (fallback: `gh pr checks <pr> --watch`)".
+   - In Phase 1 step 2's failure branch, replace "wait for them too (`gh pr checks <pr> --watch`)" with "on the Monitor path step 1 already waited for every check; on the fallback path, where `--fail-fast` may return early, wait for the rest with `gh pr checks <pr> --watch`", and update the clause "With `--fail-fast` other checks may still be running" (`skills/babysit-pr/SKILL.md:60-62`) to match.
    - In Phase 3's **still pending** outcome, say the watch hit its timeout cap.
    - Notes: in **Cap everything**, mention that the watch is bounded by the consecutive-expiry cap.
 2. `scripts/validate.py`: add `"Monitor"` to `HEURISTIC_TOOLS` and to the docstring list at line 15.
