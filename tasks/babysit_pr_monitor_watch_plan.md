@@ -21,20 +21,21 @@ Phase 1 step 1 becomes: arm `Monitor` with `timeout_ms: 1800000` (the maximum) a
 
 ```bash
 pr=<pr>; seen=""; any=0; empty=0
+expr='if length == 0 then "EMPTY" else ((.[] | select(.bucket == "fail" or .bucket == "cancel") | "F " + .name), (if all(.[]; .bucket != "pending") then "DONE " + (group_by(.bucket) | map("\(.[0].bucket)=\(length)") | join(" ")) else "PENDING" end)) end'
 while true; do
-  s=$(gh pr checks "$pr" --json name,bucket 2>/dev/null); [ -n "$s" ] || s='[]'
-  if [ "$(jq length <<<"$s")" -eq 0 ]; then
+  s=$(gh pr checks "$pr" --json name,bucket --jq "$expr" 2>/dev/null); [ -n "$s" ] || s=EMPTY
+  if [ "$s" = EMPTY ]; then
     empty=$((empty+1))
     if [ "$any" -eq 0 ] && [ "$empty" -ge 3 ]; then echo "NO CHECKS"; exit 0; fi
   else
-    any=1; empty=0
-    while IFS= read -r n; do
-      grep -qxF "$n" <<<"$seen" || { echo "FAILED: $n"; seen="$seen"$'\n'"$n"; }
-    done < <(jq -r '.[] | select(.bucket=="fail" or .bucket=="cancel") | .name' <<<"$s")
-    if jq -e 'all(.bucket != "pending")' <<<"$s" >/dev/null; then
-      echo "ALL DONE: $(jq -r 'group_by(.bucket) | map("\(.[0].bucket)=\(length)") | join(" ")' <<<"$s")"
-      exit 0
-    fi
+    any=1; empty=0; d=""
+    while IFS= read -r l; do
+      case "$l" in
+        "F "*) n=${l#F }; grep -qxF "$n" <<<"$seen" || { echo "FAILED: $n"; seen="$seen"$'\n'"$n"; } ;;
+        "DONE "*) d=${l#DONE } ;;
+      esac
+    done <<<"$s"
+    if [ -n "$d" ]; then echo "ALL DONE: $d"; exit 0; fi
   fi
   sleep 30
 done
@@ -45,7 +46,7 @@ Behavior:
 - One `FAILED: <name>` line per newly failed or cancelled check, the poll it is first seen — so an early failure is reported without waiting for slower checks.
 - One `ALL DONE: <bucket counts>` line when no check is pending, then the loop exits, ending the watch.
 - `NO CHECKS` after three consecutive empty polls (~60 s) if no check was ever seen; a transient `gh` error after checks were seen is treated as a skipped poll, not as "no checks".
-- Flushing: every event is written by `echo` from the loop's own shell, and the only filters (`jq`, `grep -q`) are per-poll processes that exit, so no long-lived pipe stage holds output in a buffer. The skill states the rule so a later edit does not add one: any long-lived filter added to the loop must flush per line (`grep --line-buffered`, `awk` with `fflush()`).
+- Flushing: every event is written by `echo` from the loop's own shell, and the only filters (`gh --jq`, `grep -q`) are per-poll processes that exit, so no long-lived pipe stage holds output in a buffer. The skill states the rule so a later edit does not add one: any long-lived filter added to the loop must flush per line (`grep --line-buffered`, `awk` with `fflush()`).
 
 Orchestrator handling of events:
 - `FAILED:` — the existing "wait for the rest so one fixer pass sees everything" rule applies: keep the same monitor armed until its `ALL DONE` line (it replaces the second `--watch` on line 61). The orchestrator may fetch the failed check's log (Phase 2 step 2) while waiting.
@@ -59,7 +60,7 @@ New explicit rule in Phase 1, covering both paths: a watch that is still running
 When the `Monitor` tool is unavailable (not offered by the harness), use the current path unchanged: `gh pr checks <pr> --watch --fail-fast` with the Bash `timeout` at 600000, the second `--watch` after a failure, and the cap of 6 consecutive timeouts — with the rule above applied: a timeout that leaves the command running in the background is waited on, not rerun; it is rerun only when the timeout actually killed it.
 
 ### Frontmatter and validator
-- `allowed-tools` gains `Monitor`. No `Bash(jq *)` entry is needed, because the loop runs inside Monitor, not as a Bash tool call.
+- `allowed-tools` gains `Monitor`. The loop uses `gh`'s built-in `--jq`, so no external `jq` binary is required, and no `Bash(...)` entry is needed because the loop runs inside Monitor, not as a Bash tool call.
 - `scripts/validate.py` `HEURISTIC_TOOLS` gains `"Monitor"`, so a skill body that names Monitor without declaring it fails CI; update the module docstring's tool list to match.
 
 ## Implementation Steps
@@ -83,7 +84,6 @@ When the `Monitor` tool is unavailable (not offered by the harness), use the cur
 ## Trade-offs
 - **Monitor deadline: maximum (30 min) with the cap of 6 kept**, as the issue proposes. This raises the longest wait from about one hour to about three hours on the Monitor path; each expiry costs one notice line, so a longer bound is cheap. The fallback keeps its ~1 hour bound.
 - **Poll loop vs. `gh pr checks --watch` piped through a filter.** A filter over `--watch` still runs the 10-second redraw and needs buffering care at every stage; the poll loop prints nothing until state changes and needs no long-lived pipe stage.
-- **Keep the same monitor after `FAILED:`** rather than arming a second watch: it is already polling every check and will print `ALL DONE`, so no second watch is needed.
 - **Fallback keeps `--watch` as-is** (per the issue) rather than running the quiet loop under Bash; it only applies where Monitor is absent.
 
 ## Decisions
