@@ -2,7 +2,7 @@
 name: babysit-pr
 description: Watch a pull request's CI until it passes, dispatching a fixer agent to repair any failing checks
 argument-hint: "[pr number or url] [— attempt cap N]"
-allowed-tools: Bash(gh *), Bash(git *), Bash(mktemp *), Read, Write, Task
+allowed-tools: Bash(gh *), Bash(git *), Bash(mktemp *), Read, Write, Task, Monitor
 ---
 
 # Babysit PR — Watch CI, Fix What Breaks
@@ -49,17 +49,67 @@ PR branch onto the latest base (Phase 1 step 3).
 
 ### Phase 1: Watch CI
 
-1. `gh pr checks <pr> --watch --fail-fast`, with the Bash `timeout` set to 600000. This blocks
-   until checks finish, one fails, or the timeout hits. If it times out with checks still pending,
-   run it again — keep waiting, up to **6** consecutive timeouts (about an hour), then stop
-   reporting the checks as still pending.
+1. **Watch with `Monitor`.** Arm `Monitor` with `timeout_ms: 1800000` and a `description` naming the PR
+   (e.g. `CI checks on PR #<pr>`), running this loop with `<pr>` substituted:
+
+   ```bash
+   pr=<pr>; seen=""; any=0; empty=0
+   expr='if length == 0 then "EMPTY" else ((.[] | select(.bucket == "fail" or .bucket == "cancel") | "F " + .name), (if all(.[]; .bucket != "pending") then "DONE " + (group_by(.bucket) | map("\(.[0].bucket)=\(length)") | join(" ")) else "PENDING" end)) end'
+   while true; do
+     s=$(gh pr checks "$pr" --json name,bucket --jq "$expr" 2>/dev/null); [ -n "$s" ] || s=EMPTY
+     if [ "$s" = EMPTY ]; then
+       empty=$((empty+1))
+       if [ "$any" -eq 0 ] && [ "$empty" -ge 3 ]; then echo "NO CHECKS"; exit 0; fi
+     else
+       any=1; empty=0; d=""
+       while IFS= read -r l; do
+         case "$l" in
+           "F "*) n=${l#F }; grep -qxF -- "$n" <<<"$seen" || { echo "FAILED: $n"; seen="$seen"$'\n'"$n"; } ;;
+           "DONE "*) d=${l#DONE } ;;
+         esac
+       done <<<"$s"
+       if [ -n "$d" ]; then echo "ALL DONE: $d"; exit 0; fi
+     fi
+     sleep 30
+   done
+   ```
+
+   The loop is silent while checks are pending (`skipping` rows never print). It prints one
+   `FAILED: <name>` line per newly failed or cancelled check, the poll it is first seen; one
+   `ALL DONE: <bucket counts>` line when no check is pending, then exits; and `NO CHECKS` after three
+   consecutive empty polls (~60 s) if no check was ever seen. A transient `gh` error after checks were
+   seen is a skipped poll, not "no checks". Any long-lived filter added to the loop must flush per line
+   (`grep --line-buffered`, `awk` with `fflush()`).
+
+   Handling events:
+   - `FAILED:` — keep the same monitor armed until its `ALL DONE` line, so one fixer pass sees every
+     failure. You may fetch the failed check's log (Phase 2 step 2) while waiting.
+   - `ALL DONE` / `NO CHECKS` — go to step 2. After `NO CHECKS`, step 2's single re-read is the second
+     look, with no further 60-second wait. If that re-read fails with a `gh` error other than "no checks
+     reported", report that error rather than **no CI**.
+   - **Deadline notice** (the monitor expired with checks still pending) — re-arm it with the same
+     command. Each expiry with no `ALL DONE` counts as one consecutive timeout; at **6**, stop and
+     report the checks as still pending. Re-arming restarts the loop's `seen` set, so a check already
+     reported may print `FAILED:` again — a repeat, not a new failure.
+
+   **Never cancel a healthy watch.** A watch that is still running — a Monitor that has not expired, or
+   a Bash command the harness moved to a background job when its timeout hit — is not a failure. Do not
+   cancel and restart it; wait for its next event or completion notification. Only a Monitor expiry
+   notice or an actual exit of the Bash command ends a wait.
+
+   **Fallback (no `Monitor` tool offered).** Run `gh pr checks <pr> --watch --fail-fast` with the Bash
+   `timeout` set to 600000, up to **6** consecutive timeouts (about an hour), then stop reporting the
+   checks as still pending. Rerun only when the timeout actually killed the command; a timeout that
+   leaves it running in the background is waited on, not rerun.
 2. Read the result with `gh pr checks <pr> --json name,state,link,workflow`:
-   - **No checks reported at all**: wait ~60 seconds and look once more (checks can lag the push).
-     If still none, report that the PR has no CI and stop — nothing to babysit.
+   - **No checks reported at all**: wait ~60 seconds and look once more (checks can lag the push),
+     unless this follows `NO CHECKS` (already waited). If still none, report that the PR has no CI and
+     stop — nothing to babysit.
    - **All checks passed** (every state `SUCCESS`, or `SKIPPED`/`NEUTRAL`): do step 3, then Phase 3.
-   - **Any `FAILURE`/`ERROR`/`CANCELLED`/`TIMED_OUT`**: do step 3, then Phase 2. With `--fail-fast` other
-     checks may still be running; wait for them too (`gh pr checks <pr> --watch`) so one fixer pass
-     can address every failure at once.
+   - **Any `FAILURE`/`ERROR`/`CANCELLED`/`TIMED_OUT`**: do step 3, then Phase 2. On the Monitor path
+     step 1 already waited for every check; on the fallback path, where `--fail-fast` may return early,
+     wait for the rest with `gh pr checks <pr> --watch` so one fixer pass can address every failure at
+     once.
 3. **Keep the branch current.** Other PRs landing on the base can leave this one `BEHIND` or
    conflicting, and CI then tests stale code or never starts. Before acting on step 2's result, check `gh pr view <pr> --json mergeStateStatus,baseRefName`.
    If it is `BEHIND` or `DIRTY`:
@@ -127,8 +177,8 @@ PR branch onto the latest base (Phase 1 step 3).
 Report concisely:
 - The PR (number + URL) and the final outcome, one of: **green** (all checks passed), **attempt cap**
   (checks still failing after N attempts, with the failing check names), **unfixable** (non-code
-  failure or the fixer could not fix it, with why), **no CI**, **still pending** (the watch timed
-  out), or **blocked** (push rejected or gated).
+  failure or the fixer could not fix it, with why), **no CI**, **still pending** (the watch hit its
+  timeout cap), or **blocked** (push rejected or gated).
 - For each fix attempt: the commit subject and which checks it addressed.
 - Each rebase conflict resolved: the file and how it was resolved, so the user can review it.
 - Any check still red, with a link, so the user can pick up from there.
@@ -140,7 +190,7 @@ Report concisely:
 - **Rebase over merge.** Matching `pr`'s rebase-onto-base convention keeps history linear; the
   lease-guarded force-push is safe because the branch is this run's own PR branch.
 - **Only the PR's own CI.** This skill does not review code, address review comments, or merge.
-- **Cap everything.** Both the fix attempts and the waiting are bounded, so the skill cannot spin
+- **Cap everything.** Both the fix attempts and the waiting (the consecutive-expiry cap) are bounded, so the skill cannot spin
   forever on a flaky or permanently red pipeline.
 - **No restated logic.** It reads `CLAUDE.md` only via the fixer's local-run hint; it does not
   duplicate `pr`'s lint/test discovery.

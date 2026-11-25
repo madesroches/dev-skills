@@ -12,7 +12,7 @@ Exits non-zero and prints one line per problem found. Checks:
 4. README.md's skill table and CLAUDE.md's architecture section mention every
    skill.
 5. Tool-declaration heuristic: a skill body that instructs use of a
-   distinctively-named tool (Task, Skill, AskUserQuestion) must declare it in
+   distinctively-named tool (Task, Skill, AskUserQuestion, Monitor) must declare it in
    `allowed-tools`. Lines containing "cannot" are ignored (negative mentions
    like "cannot use the Skill tool").
 6. Skill-invocation names: a skill body that invokes another skill of this
@@ -35,7 +35,7 @@ REQUIRED_KEYS = ("name", "description", "argument-hint", "allowed-tools")
 # Tools whose capitalized name appearing in a skill body reliably signals use.
 # Deliberately excludes ambiguous words (Read, Write, Edit) and tools that
 # skill bodies only tell *subagents* to use (WebFetch in verification prompts).
-HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion")
+HEURISTIC_TOOLS = ("Task", "Skill", "AskUserQuestion", "Monitor")
 
 # The one paragraph that binds the placeholders to model aliases. Byte-identical
 # in every skill that uses a placeholder; the only place a model alias may
